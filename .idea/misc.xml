@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EntryPointsManager">
+    <entry_points version="2.0">
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation classFiles" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation csv" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation encoding" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation execFiles" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation html" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation name" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation quiet" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation sourceFiles" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation tabWidth" />
+      <entry_point TYPE="field" FQNAME="rife.bld.extension.JacocoReportOperation xml" />
+    </entry_points>
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="classFiles" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="csv" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="encoding" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="execFiles" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="html" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="name" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="quiet" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="sourceFiles" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="tabWidth" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="xml" />
+  </component>
+  <component name="PDMPlugin">
+    <option name="skipTestSources" value="false" />
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" project-jdk-name="17" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build" />
+  </component>
+</project>
