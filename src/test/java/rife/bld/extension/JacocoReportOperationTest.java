@@ -16,16 +16,11 @@
 
 package rife.bld.extension;
 
-public class JacocoReportOperationTest {
-    void verifyHello() {
-        if (!"Hello World!".equals(new JacocoReportOperation().getMessage())) {
-            throw new AssertionError();
-        } else {
-            System.out.println("Succeeded");
-        }
-    }
+import org.junit.jupiter.api.Test;
 
-    public static void main(String[] args) {
-        new JacocoReportOperationTest().verifyHello();
+class JacocoReportOperationTest {
+    @Test
+    void executeTest() {
+
     }
 }

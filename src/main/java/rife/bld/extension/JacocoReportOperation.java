@@ -16,16 +16,27 @@
 
 package rife.bld.extension;
 
+import org.jacoco.core.analysis.Analyzer;
+import org.jacoco.core.analysis.CoverageBuilder;
+import org.jacoco.core.analysis.IBundleCoverage;
+import org.jacoco.core.data.ExecutionDataStore;
+import org.jacoco.core.tools.ExecFileLoader;
+import org.jacoco.report.*;
+import org.jacoco.report.csv.CSVFormatter;
+import org.jacoco.report.html.HTMLFormatter;
+import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
 import rife.bld.operations.AbstractOperation;
-import rife.tools.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
+
 
 /**
  * Generates <a href="https://www.jacoco.org/jacoco">JaCoCo</a> reports.
@@ -41,16 +52,26 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     private File csv;
     private String encoding;
     private File html;
-    private String name;
+    private String name = "JaCoCo Coverage Report";
     private BaseProject project;
-    private boolean quiet = false;
+    private boolean quiet;
     private int tabWidth = 4;
     private File xml;
+
+    private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
+        var builder = new CoverageBuilder();
+        var analyzer = new Analyzer(data, builder);
+        for (var f : classFiles) {
+            LOGGER.info(f.getAbsolutePath());
+            analyzer.analyzeAll(f);
+        }
+        return builder.getBundle(name);
+    }
 
     /**
      * Set the locations of Java class files.
      **/
-    public JacocoReportOperation classFiles(ArrayList<File> classFiles) {
+    public JacocoReportOperation classFiles(List<File> classFiles) {
         this.classFiles.addAll(classFiles);
         return this;
     }
@@ -74,7 +95,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets a list of JaCoCo *.exec files to read.
      **/
-    public JacocoReportOperation execFiles(ArrayList<File> execFiles) {
+    public JacocoReportOperation execFiles(List<File> execFiles) {
         this.execFiles.addAll(execFiles);
         return this;
     }
@@ -92,27 +113,37 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             LOGGER.severe("A project must be specified.");
         } else {
 
-            if (execFiles.isEmpty()) {
-                if (LOGGER.isLoggable(Level.WARNING)) {
-                    LOGGER.warning("No execution data files provided.");
-                }
-            }
+            var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
 
             if (sourceFiles.isEmpty()) {
-                sourceFiles.addAll(project.mainSourceFiles());
-                sourceFiles.addAll(project.testSourceFiles());
+                sourceFiles.add(project.srcDirectory());
+                //sourceFiles.add(project.srcTestDirectory());
             }
 
             if (classFiles.isEmpty()) {
-                classFiles.addAll(getClassFiles(project.buildMainDirectory()));
-                classFiles.addAll(getClassFiles(project.buildTestDirectory()));
+                classFiles.add(project.buildMainDirectory());
+                classFiles.add(project.buildTestDirectory());
             }
-        }
-    }
 
-    private List<File> getClassFiles(File directory) {
-        return FileUtils.getFileList(directory, Pattern.compile("^.*\\.class$"), null)
-                .stream().map(f -> new File(directory, f)).toList();
+            if (html == null) {
+                html = new File(buildJacocoReportsDir, "html");
+            }
+
+            if (xml == null) {
+                xml = new File(buildJacocoReportsDir, "jacocoTestReport.xml");
+            }
+
+            if (csv == null) {
+                csv = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
+            }
+
+            //noinspection ResultOfMethodCallIgnored
+            buildJacocoReportsDir.mkdirs();
+
+            var loader = loadExecFiles();
+            var bundle = analyze(loader.getExecutionDataStore());
+            writeReports(bundle, loader);
+        }
     }
 
     /**
@@ -123,16 +154,28 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return this;
     }
 
-    public String getMessage() {
-        return "Hello World!";
-    }
-
     /**
      * Sets the location of the HTML report.
      */
     public JacocoReportOperation html(File html) {
         this.html = html;
         return this;
+    }
+
+    private ExecFileLoader loadExecFiles() throws IOException {
+        var loader = new ExecFileLoader();
+        if (execFiles.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !quiet) {
+            LOGGER.warning("No execution data files provided.");
+        } else {
+            for (var f : execFiles) {
+                if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+                    LOGGER.log(Level.INFO, "Loading execution data file: {0}",
+                            f.getAbsolutePath());
+                }
+                loader.load(f);
+            }
+        }
+        return loader;
     }
 
     /**
@@ -151,20 +194,63 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return this;
     }
 
+    private IReportVisitor reportVisitor() throws IOException {
+        List<IReportVisitor> visitors = new ArrayList<>();
+
+        if (xml != null) {
+            var formatter = new XMLFormatter();
+            visitors.add(formatter.createVisitor(Files.newOutputStream(xml.toPath())));
+        }
+
+        if (csv != null) {
+            var formatter = new CSVFormatter();
+            visitors.add(formatter.createVisitor(Files.newOutputStream(csv.toPath())));
+        }
+
+        if (html != null) {
+            var formatter = new HTMLFormatter();
+            visitors.add(formatter.createVisitor(new FileMultiReportOutput(html)));
+        }
+
+        return new MultiReportVisitor(visitors);
+    }
+
     /**
      * Sets the locations of the source files.
      **/
-    public JacocoReportOperation sourceFiles(ArrayList<File> sourceFiles) {
+    public JacocoReportOperation sourceFiles(List<File> sourceFiles) {
         this.sourceFiles.addAll(sourceFiles);
         return this;
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private ISourceFileLocator sourceLocator() {
+        var multi = new MultiSourceFileLocator(tabWidth);
+        for (var f : sourceFiles) {
+            multi.add(new DirectorySourceFileLocator(f, encoding, tabWidth));
+        }
+        return multi;
     }
 
     /**
      * Sets the tab stop width for the source pages. Default is {@code 4}.
      */
-    public JacocoReportOperation tabWidth(int tabWitdh) {
-        this.tabWidth = tabWitdh;
+    public JacocoReportOperation tabWidth(int tabWidth) {
+        this.tabWidth = tabWidth;
         return this;
+    }
+
+    private void writeReports(IBundleCoverage bundle, ExecFileLoader loader)
+            throws IOException {
+        if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+            LOGGER.log(Level.INFO, "Analyzing {0} classes.",
+                    bundle.getClassCounter().getTotalCount());
+        }
+        IReportVisitor visitor = reportVisitor();
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(),
+                loader.getExecutionDataStore().getContents());
+        visitor.visitBundle(bundle, sourceLocator());
+        visitor.visitEnd();
     }
 
     /**
@@ -174,4 +260,5 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         this.xml = xml;
         return this;
     }
+
 }
