@@ -24,6 +24,9 @@
     <pattern value="rife.bld.extension.JacocoReportOperation" method="sourceFiles" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="tabWidth" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="xml" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="analyze" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="fromProject" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="writeReports" />
   </component>
   <component name="PDMPlugin">
     <option name="skipTestSources" value="false" />
