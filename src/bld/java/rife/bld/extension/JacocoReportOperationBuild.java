@@ -43,12 +43,12 @@ public class JacocoReportOperationBuild extends Project {
         var jacocoVersion = new VersionNumber(0, 8, 10);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
-                .include(dependency("com.uwyn.rife2", "rife2", version(1, 6, 1)));
+                .include(dependency("com.uwyn.rife2", "rife2", version(1, 6, 2)));
         scope(runtime)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"));
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 9, 2)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 9, 2)))
+                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 9, 3)))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 9, 3)))
                 .include(dependency("org.assertj:assertj-joda-time:2.2.0"));
 
         testOperation().mainClass("rife.bld.extension.JacocoReportOperationTest");

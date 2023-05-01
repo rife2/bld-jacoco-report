@@ -27,6 +27,7 @@
     <pattern value="rife.bld.extension.JacocoReportOperation" method="analyze" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="fromProject" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="writeReports" />
+    <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="pmd" />
   </component>
   <component name="PDMPlugin">
     <option name="skipTestSources" value="false" />
