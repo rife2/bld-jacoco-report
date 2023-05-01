@@ -26,16 +26,19 @@ import org.jacoco.report.csv.CSVFormatter;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
-import rife.bld.operations.AbstractOperation;
+import rife.bld.dependencies.VersionNumber;
+import rife.bld.operations.JUnitOperation;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 
 /**
@@ -44,7 +47,8 @@ import java.util.logging.Logger;
  * @author <a href="https://erik.thauvin.net/">Erik C. Thauvin</a>
  * @since 1.0
  */
-public class JacocoReportOperation extends AbstractOperation<JacocoReportOperation> {
+public class JacocoReportOperation extends JUnitOperation {
+    private static final VersionNumber JACOCO_VERSION = new VersionNumber(0, 8, 10);
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     private final List<File> classFiles = new ArrayList<>();
     private final List<File> execFiles = new ArrayList<>();
@@ -69,10 +73,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
-     * Set the locations of Java class files.
+     * Sets the locations of Java class files.
      **/
-    public JacocoReportOperation classFiles(List<File> classFiles) {
-        this.classFiles.addAll(classFiles);
+    public JacocoReportOperation classFiles(File... classFiles) {
+        this.classFiles.addAll(Arrays.stream(classFiles).toList());
         return this;
     }
 
@@ -93,31 +97,42 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
-     * Sets a list of JaCoCo *.exec files to read.
+     * Sets the locations of the JaCoCo *.exec files to read.
      **/
-    public JacocoReportOperation execFiles(List<File> execFiles) {
-        this.execFiles.addAll(execFiles);
+    public JacocoReportOperation execFiles(File... execFiles) {
+        this.execFiles.addAll(Arrays.stream(execFiles).toList());
         return this;
     }
 
     /**
      * Performs the operation execution that can be wrapped by the {@code #executeOnce} call.
      *
-     * @throws Exception when an exception occurs during the execution
      * @since 1.5.10
      */
     @Override
 
-    public void execute() throws Exception {
+    public void execute() throws IOException {
         if (project == null && LOGGER.isLoggable(Level.SEVERE)) {
             LOGGER.severe("A project must be specified.");
         } else {
-
             var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
+            var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
+            var buildJacocoTestExec = new File(buildJacocoExecDir, "text.exec");
+
+            if (execFiles.isEmpty()) {
+                execFiles.add(buildJacocoTestExec);
+
+                //noinspection ResultOfMethodCallIgnored
+                buildJacocoExecDir.mkdirs();
+
+                javaOptions().javaAgent(new File(project.libBldDirectory(), "org.jacoco.agent-" + JACOCO_VERSION + ".jar"),
+                        "destfile=" + buildJacocoTestExec +
+                                ",includes=" + classFiles.stream().map(File::toString).collect(Collectors.joining(",")));
+            }
 
             if (sourceFiles.isEmpty()) {
                 sourceFiles.add(project.srcDirectory());
-                //sourceFiles.add(project.srcTestDirectory());
+                sourceFiles.add(project.srcTestDirectory());
             }
 
             if (classFiles.isEmpty()) {
@@ -218,10 +233,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the locations of the source files.
      **/
-    public JacocoReportOperation sourceFiles(List<File> sourceFiles) {
-        this.sourceFiles.addAll(sourceFiles);
+    public JacocoReportOperation sourceFiles(File... sourceFiles) {
+        this.sourceFiles.addAll(Arrays.stream(sourceFiles).toList());
         return this;
     }
+
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private ISourceFileLocator sourceLocator() {

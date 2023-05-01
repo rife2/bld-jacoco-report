@@ -31,11 +31,6 @@ public class ExamplesBuild extends Project {
         new ExamplesBuild().start(args);
     }
 
-    @Override
-    public void compile() throws Exception {
-        super.compile();
-        jacoco();
-    }
 
     @BuildCommand(summary = "Generates Jacoco Reports")
     public void jacoco() throws Exception {
