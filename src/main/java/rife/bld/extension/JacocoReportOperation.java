@@ -26,7 +26,6 @@ import org.jacoco.report.csv.CSVFormatter;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
-import rife.bld.dependencies.VersionNumber;
 import rife.bld.operations.JUnitOperation;
 
 import java.io.File;
@@ -48,7 +47,6 @@ import java.util.stream.Collectors;
  * @since 1.0
  */
 public class JacocoReportOperation extends JUnitOperation {
-    private static final VersionNumber JACOCO_VERSION = new VersionNumber(0, 8, 10);
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     private final List<File> classFiles = new ArrayList<>();
     private final List<File> execFiles = new ArrayList<>();
@@ -117,7 +115,7 @@ public class JacocoReportOperation extends JUnitOperation {
         } else {
             var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
             var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
-            var buildJacocoTestExec = new File(buildJacocoExecDir, "text.exec");
+            var buildJacocoTestExec = new File(buildJacocoExecDir, "test.exec");
 
             if (execFiles.isEmpty()) {
                 execFiles.add(buildJacocoTestExec);
@@ -125,7 +123,7 @@ public class JacocoReportOperation extends JUnitOperation {
                 //noinspection ResultOfMethodCallIgnored
                 buildJacocoExecDir.mkdirs();
 
-                javaOptions().javaAgent(new File(project.libBldDirectory(), "org.jacoco.agent-" + JACOCO_VERSION + ".jar"),
+                javaOptions().javaAgent(new File(project.libBldDirectory(), "jacocoagent.jar"),
                         "destfile=" + buildJacocoTestExec +
                                 ",includes=" + classFiles.stream().map(File::toString).collect(Collectors.joining(",")));
             }
@@ -276,5 +274,4 @@ public class JacocoReportOperation extends JUnitOperation {
         this.xml = xml;
         return this;
     }
-
 }
