@@ -20,6 +20,8 @@ import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
 import org.jacoco.core.analysis.IBundleCoverage;
 import org.jacoco.core.data.ExecutionDataStore;
+import org.jacoco.core.instr.Instrumenter;
+import org.jacoco.core.runtime.OfflineInstrumentationAccessGenerator;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.*;
 import org.jacoco.report.csv.CSVFormatter;
@@ -30,6 +32,8 @@ import rife.bld.operations.JUnitOperation;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -37,7 +41,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 
 /**
@@ -50,10 +53,12 @@ public class JacocoReportOperation extends JUnitOperation {
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     private final List<File> classFiles = new ArrayList<>();
     private final List<File> execFiles = new ArrayList<>();
+    private final List<File> instrumentedFiles = new ArrayList<>();
     private final List<File> sourceFiles = new ArrayList<>();
     private File csv;
     private String encoding;
     private File html;
+    private Instrumenter instrumenter;
     private String name = "JaCoCo Coverage Report";
     private BaseProject project;
     private boolean quiet;
@@ -68,6 +73,22 @@ public class JacocoReportOperation extends JUnitOperation {
             analyzer.analyzeAll(f);
         }
         return builder.getBundle(name);
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private void buildInstrumentedFiles(File dest) throws IOException {
+        var total = 0;
+        for (var f : classFiles) {
+            if (f.isFile()) {
+                total += instrument(f, new File(dest, f.getName()));
+            } else {
+                total += instrumentRecursive(f, dest);
+            }
+        }
+        if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+            LOGGER.log(Level.INFO, "{0} classes instrumented to {1}.",
+                    new Object[]{total, dest.getAbsolutePath()});
+        }
     }
 
     /**
@@ -115,18 +136,10 @@ public class JacocoReportOperation extends JUnitOperation {
         } else {
             var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
             var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
-            var buildJacocoTestExec = new File(buildJacocoExecDir, "test.exec");
+            var buildJacocoClassesDir = Path.of(buildJacocoExecDir.getPath(), "classes").toFile();
 
-            if (execFiles.isEmpty()) {
-                execFiles.add(buildJacocoTestExec);
-
-                //noinspection ResultOfMethodCallIgnored
-                buildJacocoExecDir.mkdirs();
-
-                javaOptions().javaAgent(new File(project.libBldDirectory(), "jacocoagent.jar"),
-                        "destfile=" + buildJacocoTestExec +
-                                ",includes=" + classFiles.stream().map(File::toString).collect(Collectors.joining(",")));
-            }
+            instrumenter = new Instrumenter(new OfflineInstrumentationAccessGenerator());
+            instrumenter.setRemoveSignatures(true);
 
             if (sourceFiles.isEmpty()) {
                 sourceFiles.add(project.srcDirectory());
@@ -150,6 +163,17 @@ public class JacocoReportOperation extends JUnitOperation {
                 csv = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
             }
 
+            if (execFiles.isEmpty()) {
+                //noinspection ResultOfMethodCallIgnored
+                buildJacocoClassesDir.mkdirs();
+
+                buildInstrumentedFiles(buildJacocoClassesDir);
+                var files = buildJacocoClassesDir.listFiles();
+                if (files != null) {
+                    instrumentedFiles.addAll(Arrays.asList(files));
+                }
+            }
+
             //noinspection ResultOfMethodCallIgnored
             buildJacocoReportsDir.mkdirs();
 
@@ -162,6 +186,7 @@ public class JacocoReportOperation extends JUnitOperation {
     /**
      * Configure the operation from a {@link BaseProject}.
      */
+    @Override
     public JacocoReportOperation fromProject(BaseProject project) {
         this.project = project;
         return this;
@@ -173,6 +198,39 @@ public class JacocoReportOperation extends JUnitOperation {
     public JacocoReportOperation html(File html) {
         this.html = html;
         return this;
+    }
+
+    private int instrument(final File src, final File dest) throws IOException {
+        //noinspection ResultOfMethodCallIgnored
+        dest.getParentFile().mkdirs();
+        try (InputStream input = Files.newInputStream(src.toPath())) {
+            try (OutputStream output = Files.newOutputStream(dest.toPath())) {
+                return instrumenter.instrumentAll(input, output,
+                        src.getAbsolutePath());
+            }
+        } catch (final IOException e) {
+            //noinspection ResultOfMethodCallIgnored
+            dest.delete();
+            throw e;
+        }
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private int instrumentRecursive(final File src, final File dest)
+            throws IOException {
+        var total = 0;
+        if (src.isDirectory()) {
+            var listFiles = src.listFiles();
+            if (listFiles != null) {
+                for (var child : listFiles) {
+                    total += instrumentRecursive(child,
+                            new File(dest, child.getName()));
+                }
+            }
+        } else {
+            total += instrument(src, dest);
+        }
+        return total;
     }
 
     private ExecFileLoader loadExecFiles() throws IOException {
