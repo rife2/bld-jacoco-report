@@ -23,9 +23,7 @@ import rife.bld.publish.PublishDeveloper;
 import rife.bld.publish.PublishLicense;
 import rife.bld.publish.PublishScm;
 
-import java.io.File;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static rife.bld.dependencies.Repository.*;
 import static rife.bld.dependencies.Scope.*;
@@ -43,7 +41,7 @@ public class JacocoReportOperationBuild extends Project {
         repositories = List.of(MAVEN_CENTRAL, RIFE2_RELEASES);
 
         var jacocoVersion = new VersionNumber(0, 8, 10);
-        var rife2 = version(1,7,0);
+        var rife2 = version(1, 7, 0);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "rife2", rife2))
@@ -51,8 +49,8 @@ public class JacocoReportOperationBuild extends Project {
         scope(runtime)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"));
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 9, 3)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 9, 3)))
+                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 0)))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 0)))
                 .include(dependency("org.assertj:assertj-joda-time:2.2.0"));
 
         testOperation().mainClass("rife.bld.extension.JacocoReportOperationTest");
@@ -63,8 +61,8 @@ public class JacocoReportOperationBuild extends Project {
                 .link("https://rife2.github.io/rife2/");
 
         publishOperation()
-//                .repository(version.isSnapshot() ? repository("rife2-snapshot") : repository("rife2"))
-                .repository(MAVEN_LOCAL)
+                .repository(version.isSnapshot() ? repository("rife2-snapshot") : repository("rife2"))
+                // .repository(MAVEN_LOCAL)
                 .info()
                 .groupId("com.uwyn.rife2")
                 .artifactId("bld-jacoco-report")
@@ -93,5 +91,4 @@ public class JacocoReportOperationBuild extends Project {
                 .ruleSets("config/pmd.xml")
                 .execute();
     }
-
 }

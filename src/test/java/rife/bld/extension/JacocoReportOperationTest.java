@@ -17,10 +17,11 @@
 package rife.bld.extension;
 
 import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class JacocoReportOperationTest {
     @Test
     void executeTest() {
-
+        assertThat(true).isTrue(); // TODO
     }
 }
