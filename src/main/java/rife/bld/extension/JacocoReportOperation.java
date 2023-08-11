@@ -49,17 +49,50 @@ import java.util.logging.Logger;
  */
 public class JacocoReportOperation extends AbstractOperation<JacocoReportOperation> {
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
-    private final List<File> classFiles = new ArrayList<>();
-    private final List<File> execFiles = new ArrayList<>();
-    private final List<File> sourceFiles = new ArrayList<>();
-    private File csv;
-    private String encoding;
-    private File html;
-    private String name = "JaCoCo Coverage Report";
-    private BaseProject project;
-    private boolean quiet;
-    private int tabWidth = 4;
-    private File xml;
+    /**
+     * The location of the java class files.
+     */
+    final List<File> classFiles = new ArrayList<>();
+    /**
+     * The location of the exec files.
+     */
+    final List<File> execFiles = new ArrayList<>();
+    /**
+     * The location of the source files.
+     */
+    final List<File> sourceFiles = new ArrayList<>();
+    /**
+     * The location of the CSV report.
+     */
+    File csv;
+    /**
+     * The source file encoding.
+     */
+    String encoding;
+    /**
+     * The location of the HTML report.
+     */
+    File html;
+    /**
+     * The report name.
+     */
+    String name = "JaCoCo Coverage Report";
+    /**
+     * The project reference.
+     */
+    BaseProject project;
+    /**
+     * The quiet flag.
+     */
+    boolean quiet;
+    /**
+     * THe tab width.
+     */
+    int tabWidth = 4;
+    /**
+     * THe location of the XML report
+     */
+    File xml;
 
     private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
         var builder = new CoverageBuilder();

@@ -17,9 +17,27 @@
 package rife.bld.extension;
 
 import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JacocoReportOperationTest {
+    final Path tempDir;
+
+    JacocoReportOperationTest() throws IOException {
+        tempDir = Files.createTempDirectory("jacoco-test");
+    }
+
+    JacocoReportOperation newJacocoReportOperation() {
+        var o = new JacocoReportOperation();
+        o.csv(new File(tempDir.toFile(), "jacoco.csv"));
+        return o;
+    }
+
     @Test
     void executeTest() {
         assertThat(true).isTrue(); // TODO
