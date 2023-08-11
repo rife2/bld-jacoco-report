@@ -22,7 +22,7 @@ public void jacoco() throws IOException {
 ./bld compile jacoco
 ```
 
-- The HTML, CVS and XML reports will be automatically created in the `build/reports/jacoco/test` directory.
+- The HTML, CSV and XML reports will be automatically created in the `build/reports/jacoco/test` directory.
 - The execution coverage data will be automatically recorded in the `build/jacoco/jacoco.exec` file.
 
 Please check the [JacocoReportOperation documentation](https://rife2.github.io/bld-jacoco-report/rife/bld/extension/JacocoReportOperation.html#method-summary) for all available configuration options.

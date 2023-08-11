@@ -66,7 +66,7 @@ public class JacocoReportOperationBuild extends Project {
                 .info()
                 .groupId("com.uwyn.rife2")
                 .artifactId("bld-jacoco-report")
-                .description("bld Extension to Generate JaCoCo Reports")
+                .description("bld Extension to Generate JaCoCo Code Coverage Reports")
                 .url("https://github.com/rife2/bld-pmd")
                 .developer(new PublishDeveloper().id("ethauvin").name("Erik C. Thauvin").email("erik@thauvin.net")
                         .url("https://erik.thauvin.net/"))
