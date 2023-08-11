@@ -1,4 +1,4 @@
-# [Bld](https://rife2.com/bld) Extension to Code Coverage Analysis with [JaCoCo](https://www.eclemma.org/jacoco/)
+# [Bld](https://rife2.com/bld) Extension to Generate Code Coverage Reports with [JaCoCo](https://www.eclemma.org/jacoco/)
 
 
 [![License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
