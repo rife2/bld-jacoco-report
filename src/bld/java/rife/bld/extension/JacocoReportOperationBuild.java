@@ -32,7 +32,7 @@ import static rife.bld.operations.JavadocOptions.DocLinkOption.NO_MISSING;
 public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
-        name = "bld-jacoco-report";
+        name = "JacocoReportOperation";
         version = version(0, 9, 0, "SNAPSHOT");
 
         javaRelease = 17;
