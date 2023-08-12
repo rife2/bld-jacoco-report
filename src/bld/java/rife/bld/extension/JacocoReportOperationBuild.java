@@ -53,8 +53,6 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 0)))
                 .include(dependency("org.assertj:assertj-joda-time:2.2.0"));
 
-        testOperation().mainClass("rife.bld.extension.JacocoReportOperationTest");
-
         javadocOperation()
                 .javadocOptions()
                 .docLint(NO_MISSING)
@@ -62,7 +60,7 @@ public class JacocoReportOperationBuild extends Project {
 
         publishOperation()
                 .repository(version.isSnapshot() ? repository("rife2-snapshot") : repository("rife2"))
-                // .repository(MAVEN_LOCAL)
+//                .repository(MAVEN_LOCAL)
                 .info()
                 .groupId("com.uwyn.rife2")
                 .artifactId("bld-jacoco-report")
@@ -84,7 +82,7 @@ public class JacocoReportOperationBuild extends Project {
     }
 
     @BuildCommand(summary = "Runs PMD analysis")
-    public void pmd() throws Exception {
+    public void pmd() {
         new PmdOperation()
                 .fromProject(this)
                 .failOnViolation(true)

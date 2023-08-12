@@ -142,34 +142,38 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     @Override
     public void execute() throws IOException {
         if ((project == null) && LOGGER.isLoggable(Level.SEVERE)) {
-            LOGGER.severe("A project and version must be specified.");
+            LOGGER.severe("A project must be specified.");
         } else {
             var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
             var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
             var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
 
+            if (execFiles.isEmpty()) {
 //            project.testOperation().fromProject(project).javaOptions().javaAgent(
 //                    Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
 //                            + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar").toFile(),
 //                    "destfile=" + Path.of(buildJacocoExecDir.getPath(), "jacoco.exec"));
-            project.testOperation().fromProject(project).javaOptions().add("-javaagent:" +
-                    Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
-                            + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar")
-                    + "=destfile=" + Path.of(buildJacocoExecDir.getPath(), "jacoco.exec"));
-            try {
-                project.testOperation().execute();
-            } catch (InterruptedException | ExitStatusException e) {
-                throw new IOException(e);
+                project.testOperation().fromProject(project).javaOptions().add("-javaagent:" +
+                        Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
+                                + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar")
+                        + "=destfile=" + Path.of(buildJacocoExecDir.getPath(), "jacoco.exec"));
+                try {
+                    project.testOperation().execute();
+                } catch (InterruptedException | ExitStatusException e) {
+                    throw new IOException(e);
+                }
+
+                if (buildJacocoExec.exists()) {
+                    execFiles.add(buildJacocoExec);
+                }
             }
 
             if (sourceFiles.isEmpty()) {
-                sourceFiles.add(project.srcDirectory());
-                sourceFiles.add(project.srcTestDirectory());
+                sourceFiles.add(project.srcMainJavaDirectory());
             }
 
             if (classFiles.isEmpty()) {
                 classFiles.add(project.buildMainDirectory());
-                classFiles.add(project.buildTestDirectory());
             }
 
             if (html == null) {
@@ -182,10 +186,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
             if (csv == null) {
                 csv = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
-            }
-
-            if (execFiles.isEmpty() && (buildJacocoExec.exists())) {
-                execFiles.add(buildJacocoExec);
             }
 
             //noinspection ResultOfMethodCallIgnored
@@ -267,7 +267,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
-     * Sets the locations of the source files.
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
      **/
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
         this.sourceFiles.addAll(Arrays.stream(sourceFiles).toList());

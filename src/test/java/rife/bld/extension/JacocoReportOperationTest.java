@@ -17,29 +17,64 @@
 package rife.bld.extension;
 
 import org.junit.jupiter.api.Test;
+import rife.bld.Project;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class JacocoReportOperationTest {
+    final File csv;
+    final File html;
     final Path tempDir;
+    final File xml;
 
     JacocoReportOperationTest() throws IOException {
         tempDir = Files.createTempDirectory("jacoco-test");
+        csv = (new File(tempDir.toFile(), "jacoco.csv"));
+        html = (new File(tempDir.toFile(), "html"));
+        xml = (new File(tempDir.toFile(), "jacoco.xml"));
+    }
+
+    static void deleteOnExit(File folder) {
+        folder.deleteOnExit();
+        for (var f : Objects.requireNonNull(folder.listFiles())) {
+            if (f.isDirectory()) {
+                deleteOnExit(f);
+            } else {
+                f.deleteOnExit();
+            }
+        }
+    }
+
+    @Test
+    void executeTest() throws IOException {
+        newJacocoReportOperation().execute();
+
+        assertThat(csv).exists();
+        assertThat(html).isDirectory();
+        assertThat(xml).exists();
+        try (var lines = Files.lines(xml.toPath())) {
+            assertThat(lines.anyMatch(s ->
+                    s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+        }
+
+//        deleteOnExit(tempDir.toFile());
     }
 
     JacocoReportOperation newJacocoReportOperation() {
         var o = new JacocoReportOperation();
-        o.csv(new File(tempDir.toFile(), "jacoco.csv"));
+        o.fromProject(new Project());
+        o.csv(csv);
+        o.html(html);
+        o.xml(xml);
+        o.classFiles(new File("src/test/resources/Examples.class"));
+        o.sourceFiles(new File("examples/src/main/java"));
+        o.execFiles(new File("src/test/resources/jacoco.exec"));
         return o;
-    }
-
-    @Test
-    void executeTest() {
-        assertThat(true).isTrue(); // TODO
     }
 }
