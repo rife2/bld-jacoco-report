@@ -26,3 +26,18 @@ public void jacoco() throws IOException {
 - The execution coverage data will be automatically recorded in the `build/jacoco/jacoco.exec` file.
 
 Please check the [JacocoReportOperation documentation](https://rife2.github.io/bld-jacoco-report/rife/bld/extension/JacocoReportOperation.html#method-summary) for all available configuration options.
+
+### SonarQube/SonarCloud
+
+To use a JaCoCo report with [sonar](https://www.sonarsource.com/), add something like the following to your `sonar-project.properties`:
+
+```properties
+sonar.organization=YOUR_ORGANIZATION
+sonar.projectKey=YOUR_PROJECT_KEY
+sonar.coverage.jacoco.xmlReportPaths=build/reports/jacoco/test/jacocoTestReport.xml
+sonar.sources=src/main/java/
+sonar.tests=src/test/java/
+sonar.java.binaries=build/main,build/test
+sonar.java.libraries=lib/runtime/*.jar
+
+```
