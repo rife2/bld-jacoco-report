@@ -66,6 +66,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     File csv;
     /**
+     * The file to write execution data to.
+     */
+    File destFile;
+    /**
      * The source file encoding.
      */
     String encoding;
@@ -94,6 +98,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     File xml;
 
+
     private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
         var builder = new CoverageBuilder();
         var analyzer = new Analyzer(data, builder);
@@ -117,6 +122,14 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation csv(File cvs) {
         this.csv = cvs;
+        return this;
+    }
+
+    /**
+     * Sets the file to write execution data to.
+     */
+    public JacocoReportOperation destFile(File destFile) {
+        this.destFile = destFile;
         return this;
     }
 
@@ -148,6 +161,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
             var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
 
+            if (destFile == null) {
+                destFile = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
+            }
+
             if (execFiles.isEmpty()) {
 //            project.testOperation().fromProject(project).javaOptions().javaAgent(
 //                    Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
@@ -156,7 +173,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
                 project.testOperation().fromProject(project).javaOptions().add("-javaagent:" +
                         Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
                                 + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar")
-                        + "=destfile=" + Path.of(buildJacocoExecDir.getPath(), "jacoco.exec"));
+                        + "=destfile=" + destFile.getPath());
                 try {
                     project.testOperation().execute();
                 } catch (InterruptedException | ExitStatusException e) {

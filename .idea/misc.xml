@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
     <entry_points version="2.0">
@@ -27,6 +28,7 @@
     <pattern value="rife.bld.extension.JacocoReportOperation" method="fromProject" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="writeReports" />
     <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="pmd" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="destFile" />
   </component>
   <component name="PDMPlugin">
     <option name="customRuleSets">

@@ -62,8 +62,8 @@ class JacocoReportOperationTest {
             assertThat(lines.anyMatch(s ->
                     s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
         }
-
-//        deleteOnExit(tempDir.toFile());
+        assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
+        deleteOnExit(tempDir.toFile());
     }
 
     JacocoReportOperation newJacocoReportOperation() {
