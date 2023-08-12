@@ -169,7 +169,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 //            project.testOperation().fromProject(project).javaOptions().javaAgent(
 //                    Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
 //                            + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar").toFile(),
-//                    "destfile=" + Path.of(buildJacocoExecDir.getPath(), "jacoco.exec"));
+//                    "destfile=" + destFile.getPath());
                 project.testOperation().fromProject(project).javaOptions().add("-javaagent:" +
                         Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
                                 + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar")
@@ -178,6 +178,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
                     project.testOperation().execute();
                 } catch (InterruptedException | ExitStatusException e) {
                     throw new IOException(e);
+                }
+
+                if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+                    LOGGER.log(Level.INFO, "Execution Data: {0}", destFile);
                 }
 
                 if (buildJacocoExec.exists()) {
@@ -237,7 +241,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         } else {
             for (var f : execFiles) {
                 if (LOGGER.isLoggable(Level.INFO) && !quiet) {
-                    LOGGER.log(Level.INFO, "Loading execution data file: {0}",
+                    LOGGER.log(Level.INFO, "Loading execution data: {0}",
                             f.getAbsolutePath());
                 }
                 loader.load(f);
@@ -319,6 +323,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
                 loader.getExecutionDataStore().getContents());
         visitor.visitBundle(bundle, sourceLocator());
         visitor.visitEnd();
+        if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml);
+            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv);
+            LOGGER.log(Level.INFO, "HTML Report: file://{0}/index.html", html);
+        }
     }
 
     /**

@@ -63,6 +63,7 @@ class JacocoReportOperationTest {
                     s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
         }
         assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
+
         deleteOnExit(tempDir.toFile());
     }
 
