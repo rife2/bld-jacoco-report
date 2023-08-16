@@ -7,7 +7,9 @@
 [![Snapshot](https://flat.badgen.net/maven/v/metadata-url/repo.rife2.com/snapshots/com/uwyn/rife2/bld-jacoco-report/maven-metadata.xml?label=snapshot)](https://repo.rife2.com/#/snapshots/com/uwyn/rife2/bld-jacoco-report)
 [![GitHub CI](https://github.com/rife2/bld-jacoco-report/actions/workflows/bld.yml/badge.svg)](https://github.com/rife2/bld-jacoco-report/actions/workflows/bld.yml)
 
-To run the tests and generate the code coverage reports:
+To install, please refer to the [extensions documentation](https://github.com/rife2/bld/wiki/Extensions).
+
+To run the tests and generate the code coverage reports, add the floowing to your build file:
 
 ```java
 @BuildCommand(summary = "Generates Jacoco Reports")
