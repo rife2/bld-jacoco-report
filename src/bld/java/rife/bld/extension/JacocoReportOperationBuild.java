@@ -33,7 +33,7 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(0, 9, 0, "SNAPSHOT");
+        version = version(0, 9, 0);
 
         javaRelease = 17;
         downloadSources = true;
@@ -41,11 +41,10 @@ public class JacocoReportOperationBuild extends Project {
         repositories = List.of(MAVEN_CENTRAL, RIFE2_RELEASES);
 
         var jacocoVersion = new VersionNumber(0, 8, 10);
-        var rife2 = version(1, 7, 0);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
-                .include(dependency("com.uwyn.rife2", "rife2", rife2))
-                .include(dependency("com.uwyn.rife2", "bld", rife2));
+                .include(dependency("com.uwyn.rife2", "rife2", version(1, 7, 0)))
+                .include(dependency("com.uwyn.rife2", "bld", version(1, 7, 1)));
         scope(runtime)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"));
         scope(test)
