@@ -1,4 +1,4 @@
-# [Bld](https://rife2.com/bld) Extension to Generate Code Coverage Reports with [JaCoCo](https://www.eclemma.org/jacoco/)
+# [bld](https://rife2.com/bld) Extension to Generate Code Coverage Reports with [JaCoCo](https://www.eclemma.org/jacoco/)
 
 
 [![License](https://img.shields.io/badge/license-Apache%20License%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -25,6 +25,8 @@ public void jacoco() throws IOException {
 ./bld compile jacoco
 ```
 
+- [View Examples](https://github.com/rife2/bld-jacoco-report/tree/master/examples)
+
 - The HTML, CSV and XML reports will be automatically created in the `build/reports/jacoco/test` directory.
 - The execution coverage data will be automatically recorded in the `build/jacoco/jacoco.exec` file.
 
@@ -42,5 +44,4 @@ sonar.sources=src/main/java/
 sonar.tests=src/test/java/
 sonar.java.binaries=build/main,build/test
 sonar.java.libraries=lib/compile/*.jar
-
 ```
