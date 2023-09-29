@@ -211,6 +211,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
             //noinspection ResultOfMethodCallIgnored
             buildJacocoReportsDir.mkdirs();
+            //noinspection ResultOfMethodCallIgnored
+            buildJacocoExecDir.mkdirs();
 
             var loader = loadExecFiles();
             var bundle = analyze(loader.getExecutionDataStore());
