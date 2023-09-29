@@ -49,7 +49,7 @@ public class JacocoReportOperationBuild extends Project {
         scope(test)
                 .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 0)))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 0)))
-                .include(dependency("org.assertj:assertj-joda-time:2.2.0"));
+                .include(dependency("org.assertj", "assertj-core", version(3, 24, 2)));
 
         javadocOperation()
                 .javadocOptions()
