@@ -40,10 +40,10 @@ public class JacocoReportOperationBuild extends Project {
         autoDownloadPurge = true;
         repositories = List.of(MAVEN_CENTRAL, RIFE2_RELEASES);
 
-        var jacocoVersion = new VersionNumber(0, 8, 10);
+        var jacocoVersion = new VersionNumber(0, 8, 11);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
-                .include(dependency("com.uwyn.rife2", "bld", version(1, 7, 1)));
+                .include(dependency("com.uwyn.rife2", "bld", version(1, 7, 5)));
         scope(runtime)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"));
         scope(test)
