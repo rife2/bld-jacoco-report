@@ -25,7 +25,8 @@ import rife.bld.publish.PublishScm;
 
 import java.util.List;
 
-import static rife.bld.dependencies.Repository.*;
+import static rife.bld.dependencies.Repository.MAVEN_CENTRAL;
+import static rife.bld.dependencies.Repository.RIFE2_RELEASES;
 import static rife.bld.dependencies.Scope.*;
 import static rife.bld.operations.JavadocOptions.DocLinkOption.NO_MISSING;
 
@@ -33,7 +34,7 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(0, 9, 1);
+        version = version(0, 9, 2, "SNAPSHOT");
 
         javaRelease = 17;
         downloadSources = true;
@@ -53,6 +54,7 @@ public class JacocoReportOperationBuild extends Project {
 
         javadocOperation()
                 .javadocOptions()
+                .author()
                 .docLint(NO_MISSING)
                 .link("https://rife2.github.io/bld/")
                 .link("https://rife2.github.io/rife2/");

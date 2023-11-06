@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -113,7 +113,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * Sets the locations of Java class files.
      **/
     public JacocoReportOperation classFiles(File... classFiles) {
-        this.classFiles.addAll(Arrays.stream(classFiles).toList());
+        this.classFiles.addAll(List.of(classFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of Java class files.
+     **/
+    public JacocoReportOperation classFiles(Collection<File> classFiles) {
+        this.classFiles.addAll(classFiles);
         return this;
     }
 
@@ -145,7 +153,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * Sets the locations of the JaCoCo *.exec files to read.
      */
     public JacocoReportOperation execFiles(File... execFiles) {
-        this.execFiles.addAll(Arrays.stream(execFiles).toList());
+        this.execFiles.addAll(List.of(execFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     */
+    public JacocoReportOperation execFiles(Collection<File> execFiles) {
+        this.execFiles.addAll(execFiles);
         return this;
     }
 
@@ -293,7 +309,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * Sets the locations of the source files. (e.g., {@code src/main/java})
      **/
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
-        this.sourceFiles.addAll(Arrays.stream(sourceFiles).toList());
+        this.sourceFiles.addAll(List.of(sourceFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
+     **/
+    public JacocoReportOperation sourceFiles(Collection<File> sourceFiles) {
+        this.sourceFiles.addAll(sourceFiles);
         return this;
     }
 
