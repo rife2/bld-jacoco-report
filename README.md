@@ -21,7 +21,7 @@ public void jacoco() throws IOException {
 }
 ```
 
-```text
+```console
 ./bld compile jacoco
 ```
 

@@ -111,7 +111,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of Java class files.
-     **/
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     */
     public JacocoReportOperation classFiles(File... classFiles) {
         this.classFiles.addAll(List.of(classFiles));
         return this;
@@ -119,7 +122,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of Java class files.
-     **/
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     */
     public JacocoReportOperation classFiles(Collection<File> classFiles) {
         this.classFiles.addAll(classFiles);
         return this;
@@ -127,6 +133,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the location of the CSV report.
+     *
+     * @param cvs the report location
+     * @return this operation instance
      */
     public JacocoReportOperation csv(File cvs) {
         this.csv = cvs;
@@ -135,6 +144,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the file to write execution data to.
+     *
+     * @param destFile the file
+     * @return this operation instance
      */
     public JacocoReportOperation destFile(File destFile) {
         this.destFile = destFile;
@@ -143,6 +155,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the source file encoding. The platform encoding is used by default.
+     *
+     * @param encoding the encoding
+     * @return this operation instance
      */
     public JacocoReportOperation encoding(String encoding) {
         this.encoding = encoding;
@@ -151,6 +166,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
      */
     public JacocoReportOperation execFiles(File... execFiles) {
         this.execFiles.addAll(List.of(execFiles));
@@ -159,6 +177,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
      */
     public JacocoReportOperation execFiles(Collection<File> execFiles) {
         this.execFiles.addAll(execFiles);
@@ -238,6 +259,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Configure the operation from a {@link BaseProject}.
+     *
+     * @param project the project
+     * @return this operation instance
      */
     public JacocoReportOperation fromProject(BaseProject project) {
         this.project = project;
@@ -246,6 +270,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the location of the HTML report.
+     *
+     * @param html the html
+     * @return this operation instance
      */
     public JacocoReportOperation html(File html) {
         this.html = html;
@@ -270,6 +297,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the name used for the report.
+     *
+     * @param name the name
+     * @return this operation instance
      */
     public JacocoReportOperation name(String name) {
         this.name = name;
@@ -278,6 +308,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Suppresses all output.
+     *
+     * @param quiet {@code true} or {@code false}
+     * @return this operation instance
      */
     public JacocoReportOperation quiet(boolean quiet) {
         this.quiet = quiet;
@@ -307,7 +340,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of the source files. (e.g., {@code src/main/java})
-     **/
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     */
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
         this.sourceFiles.addAll(List.of(sourceFiles));
         return this;
@@ -315,7 +351,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the locations of the source files. (e.g., {@code src/main/java})
-     **/
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     */
     public JacocoReportOperation sourceFiles(Collection<File> sourceFiles) {
         this.sourceFiles.addAll(sourceFiles);
         return this;
@@ -332,6 +371,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the tab stop width for the source pages. Default is {@code 4}.
+     *
+     * @param tabWidth the tab width
+     * @return this operation instance
      */
     public JacocoReportOperation tabWidth(int tabWidth) {
         this.tabWidth = tabWidth;
@@ -358,6 +400,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the location of the XML report.
+     *
+     * @param xml the report location
+     * @return this operation instance
      */
     public JacocoReportOperation xml(File xml) {
         this.xml = xml;

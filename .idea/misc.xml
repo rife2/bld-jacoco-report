@@ -29,6 +29,7 @@
     <pattern value="rife.bld.extension.JacocoReportOperation" method="writeReports" />
     <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="pmd" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="destFile" />
+    <pattern value="rife.bld.extension.JacocoReportOperation" method="isNotBlank" />
   </component>
   <component name="PDMPlugin">
     <option name="customRuleSets">
@@ -39,6 +40,7 @@
         <option value="$PROJECT_DIR$/../bld-exec/config/pmd.xml" />
         <option value="$PROJECT_DIR$/../bld-testng/config/pmd.xml" />
         <option value="$PROJECT_DIR$/../bld-pitest/config/pmd.xml" />
+        <option value="$PROJECT_DIR$/../bld-generated-version/config/pmd.xml" />
       </list>
     </option>
     <option name="skipTestSources" value="false" />
