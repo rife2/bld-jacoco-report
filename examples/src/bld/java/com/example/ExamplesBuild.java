@@ -17,11 +17,14 @@ public class ExamplesBuild extends Project {
         name = "Examples";
         version = version(0, 1, 0);
 
+        downloadSources = true;
+        autoDownloadPurge = true;
+
         repositories = List.of(MAVEN_LOCAL, MAVEN_CENTRAL);
 
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 1)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 1)));
+                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 2)))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 2)));
     }
 
     public static void main(String[] args) {
