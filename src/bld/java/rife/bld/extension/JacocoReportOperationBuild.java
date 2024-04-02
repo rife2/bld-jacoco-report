@@ -34,19 +34,17 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(0, 9, 3);
+        version = version(0, 9, 4);
 
         javaRelease = 17;
         downloadSources = true;
         autoDownloadPurge = true;
         repositories = List.of(MAVEN_CENTRAL, RIFE2_RELEASES);
 
-        var jacocoVersion = new VersionNumber(0, 8, 11);
+        var jacocoVersion = new VersionNumber(0, 8, 12);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld", version(1, 9, 0)));
-        scope(runtime)
-                .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"));
         scope(test)
                 .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 2)))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 2)))
@@ -76,7 +74,7 @@ public class JacocoReportOperationBuild extends Project {
                 .license(
                         new PublishLicense()
                                 .name("The Apache License, Version 2.0")
-                                .url("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                                .url("https://www.apache.org/licenses/LICENSE-2.0.txt")
                 )
                 .scm(
                         new PublishScm().connection("scm:git:https://github.com/rife2/bld-pmd.git")
