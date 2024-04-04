@@ -203,16 +203,12 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             }
 
             if (execFiles.isEmpty()) {
-//            project.testOperation().fromProject(project).javaOptions().javaAgent(
-//                    Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
-//                            + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar").toFile(),
-//                    "destfile=" + destFile.getPath());
-                project.testOperation().fromProject(project).javaOptions().add("-javaagent:" +
-                        Path.of(project.libBldDirectory().getPath(), "org.jacoco.agent-"
-                                + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.')) + "-runtime.jar")
-                        + "=destfile=" + destFile.getPath());
+                var testOperation = project.testOperation().fromProject(project);
+                testOperation.javaOptions().javaAgent(Path.of(project.libBldDirectory().getPath(),
+                        "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
+                                + "-runtime.jar").toFile(), "destfile=" + destFile.getPath());
                 try {
-                    project.testOperation().execute();
+                    testOperation.execute();
                 } catch (InterruptedException | ExitStatusException e) {
                     throw new IOException(e);
                 }

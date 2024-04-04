@@ -17,6 +17,8 @@ public class ExamplesBuild extends Project {
         name = "Examples";
         version = version(0, 1, 0);
 
+        javaRelease = 17;
+
         downloadSources = true;
         autoDownloadPurge = true;
 
