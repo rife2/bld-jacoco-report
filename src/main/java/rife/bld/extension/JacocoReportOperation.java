@@ -388,9 +388,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         visitor.visitBundle(bundle, sourceLocator());
         visitor.visitEnd();
         if (LOGGER.isLoggable(Level.INFO) && !quiet) {
-            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml);
-            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv);
-            LOGGER.log(Level.INFO, "HTML Report: file://{0}/index.html", html);
+            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml.toURI().getPath());
+            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv.toURI().getPath());
+            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", html.toURI().getPath());
         }
     }
 
