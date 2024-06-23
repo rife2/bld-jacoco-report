@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
@@ -52,61 +53,61 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * The location of the java class files.
      */
-    final List<File> classFiles = new ArrayList<>();
+    final private Collection<File> classFiles_ = new ArrayList<>();
     /**
      * The location of the exec files.
      */
-    final List<File> execFiles = new ArrayList<>();
+    final private Collection<File> execFiles_ = new ArrayList<>();
     /**
      * The location of the source files.
      */
-    final List<File> sourceFiles = new ArrayList<>();
+    final private Collection<File> sourceFiles_ = new ArrayList<>();
     /**
      * The location of the CSV report.
      */
-    File csv;
+    private File csv_;
     /**
      * The file to write execution data to.
      */
-    File destFile;
+    private File destFile_;
     /**
      * The source file encoding.
      */
-    String encoding;
+    private String encoding_;
     /**
      * The location of the HTML report.
      */
-    File html;
-    /**
-     * The report name.
-     */
-    String name = "JaCoCo Coverage Report";
+    private File html_;
     /**
      * The project reference.
      */
-    BaseProject project;
+    private BaseProject project_;
     /**
      * The quiet flag.
      */
-    boolean quiet;
+    private boolean quiet_;
+    /**
+     * The report name.
+     */
+    private String reportName_ = "JaCoCo Coverage Report";
     /**
      * THe tab width.
      */
-    int tabWidth = 4;
+    private int tabWidth_ = 4;
     /**
      * THe location of the XML report
      */
-    File xml;
+    private File xml_;
 
 
     private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
         var builder = new CoverageBuilder();
         var analyzer = new Analyzer(data, builder);
-        for (var f : classFiles) {
+        for (var f : classFiles_) {
             LOGGER.info(f.getAbsolutePath());
             analyzer.analyzeAll(f);
         }
-        return builder.getBundle(name);
+        return builder.getBundle(reportName_);
     }
 
     /**
@@ -116,7 +117,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation classFiles(File... classFiles) {
-        this.classFiles.addAll(List.of(classFiles));
+        classFiles_.addAll(List.of(classFiles));
         return this;
     }
 
@@ -126,8 +127,28 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param classFiles the class files
      * @return this operation instance
      */
+    public JacocoReportOperation classFiles(String... classFiles) {
+        classFiles_.addAll(Arrays.stream(classFiles).map(File::new).toList());
+        return this;
+    }
+
+    /**
+     * Returns the locations of Java class files.
+     *
+     * @return the class files
+     */
+    public Collection<File> classFiles() {
+        return classFiles_;
+    }
+
+    /**
+     * Sets the locations of Java class files.
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     */
     public JacocoReportOperation classFiles(Collection<File> classFiles) {
-        this.classFiles.addAll(classFiles);
+        classFiles_.addAll(classFiles);
         return this;
     }
 
@@ -138,7 +159,29 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation csv(File cvs) {
-        this.csv = cvs;
+        csv_ = cvs;
+        return this;
+    }
+
+    /**
+     * Sets the location of the CSV report.
+     *
+     * @param cvs the report location
+     * @return this operation instance
+     */
+    public JacocoReportOperation csv(String cvs) {
+        return csv(new File(cvs));
+    }
+
+
+    /**
+     * Sets the file to write execution data to.
+     *
+     * @param destFile the file
+     * @return this operation instance
+     */
+    public JacocoReportOperation destFile(File destFile) {
+        destFile_ = destFile;
         return this;
     }
 
@@ -148,9 +191,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param destFile the file
      * @return this operation instance
      */
-    public JacocoReportOperation destFile(File destFile) {
-        this.destFile = destFile;
-        return this;
+    public JacocoReportOperation destFile(String destFile) {
+        return destFile(new File(destFile));
     }
 
     /**
@@ -160,7 +202,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation encoding(String encoding) {
-        this.encoding = encoding;
+        encoding_ = encoding;
         return this;
     }
 
@@ -171,7 +213,18 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation execFiles(File... execFiles) {
-        this.execFiles.addAll(List.of(execFiles));
+        execFiles_.addAll(List.of(execFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
+     */
+    public JacocoReportOperation execFiles(String... execFiles) {
+        execFiles_.addAll(Arrays.stream(execFiles).map(File::new).toList());
         return this;
     }
 
@@ -182,8 +235,17 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation execFiles(Collection<File> execFiles) {
-        this.execFiles.addAll(execFiles);
+        execFiles_.addAll(execFiles);
         return this;
+    }
+
+    /**
+     * Returns the locations of the JaCoCo *.exec files to read.
+     *
+     * @return the exec files
+     */
+    public Collection<File> execFiles() {
+        return execFiles_;
     }
 
     /**
@@ -191,55 +253,55 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     @Override
     public void execute() throws IOException {
-        if ((project == null) && LOGGER.isLoggable(Level.SEVERE)) {
+        if ((project_ == null) && LOGGER.isLoggable(Level.SEVERE)) {
             LOGGER.severe("A project must be specified.");
         } else {
-            var buildJacocoReportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
-            var buildJacocoExecDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
+            var buildJacocoReportsDir = Path.of(project_.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
+            var buildJacocoExecDir = Path.of(project_.buildDirectory().getPath(), "jacoco").toFile();
             var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
 
-            if (destFile == null) {
-                destFile = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
+            if (destFile_ == null) {
+                destFile_ = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
             }
 
-            if (execFiles.isEmpty()) {
-                var testOperation = project.testOperation().fromProject(project);
-                testOperation.javaOptions().javaAgent(Path.of(project.libBldDirectory().getPath(),
+            if (execFiles_.isEmpty()) {
+                var testOperation = project_.testOperation().fromProject(project_);
+                testOperation.javaOptions().javaAgent(Path.of(project_.libBldDirectory().getPath(),
                         "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
-                                + "-runtime.jar").toFile(), "destfile=" + destFile.getPath());
+                                + "-runtime.jar").toFile(), "destfile=" + destFile_.getPath());
                 try {
                     testOperation.execute();
                 } catch (InterruptedException | ExitStatusException e) {
                     throw new IOException(e);
                 }
 
-                if (LOGGER.isLoggable(Level.INFO) && !quiet) {
-                    LOGGER.log(Level.INFO, "Execution Data: {0}", destFile);
+                if (LOGGER.isLoggable(Level.INFO) && !quiet_) {
+                    LOGGER.log(Level.INFO, "Execution Data: {0}", destFile_);
                 }
 
                 if (buildJacocoExec.exists()) {
-                    execFiles.add(buildJacocoExec);
+                    execFiles_.add(buildJacocoExec);
                 }
             }
 
-            if (sourceFiles.isEmpty()) {
-                sourceFiles.add(project.srcMainJavaDirectory());
+            if (sourceFiles_.isEmpty()) {
+                sourceFiles_.add(project_.srcMainJavaDirectory());
             }
 
-            if (classFiles.isEmpty()) {
-                classFiles.add(project.buildMainDirectory());
+            if (classFiles_.isEmpty()) {
+                classFiles_.add(project_.buildMainDirectory());
             }
 
-            if (html == null) {
-                html = new File(buildJacocoReportsDir, "html");
+            if (html_ == null) {
+                html_ = new File(buildJacocoReportsDir, "html");
             }
 
-            if (xml == null) {
-                xml = new File(buildJacocoReportsDir, "jacocoTestReport.xml");
+            if (xml_ == null) {
+                xml_ = new File(buildJacocoReportsDir, "jacocoTestReport.xml");
             }
 
-            if (csv == null) {
-                csv = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
+            if (csv_ == null) {
+                csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
             }
 
             //noinspection ResultOfMethodCallIgnored
@@ -260,7 +322,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation fromProject(BaseProject project) {
-        this.project = project;
+        project_ = project;
         return this;
     }
 
@@ -271,17 +333,27 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation html(File html) {
-        this.html = html;
+        html_ = html;
         return this;
+    }
+
+    /**
+     * Sets the location of the HTML report.
+     *
+     * @param html the html
+     * @return this operation instance
+     */
+    public JacocoReportOperation html(String html) {
+        return html(new File(html));
     }
 
     private ExecFileLoader loadExecFiles() throws IOException {
         var loader = new ExecFileLoader();
-        if (execFiles.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !quiet) {
+        if (execFiles_.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !quiet_) {
             LOGGER.warning("No execution data files provided.");
         } else {
-            for (var f : execFiles) {
-                if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+            for (var f : execFiles_) {
+                if (LOGGER.isLoggable(Level.INFO) && !quiet_) {
                     LOGGER.log(Level.INFO, "Loading execution data: {0}",
                             f.getAbsolutePath());
                 }
@@ -298,7 +370,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation name(String name) {
-        this.name = name;
+        reportName_ = name;
         return this;
     }
 
@@ -309,26 +381,26 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation quiet(boolean quiet) {
-        this.quiet = quiet;
+        quiet_ = quiet;
         return this;
     }
 
     private IReportVisitor reportVisitor() throws IOException {
         List<IReportVisitor> visitors = new ArrayList<>();
 
-        if (xml != null) {
+        if (xml_ != null) {
             var formatter = new XMLFormatter();
-            visitors.add(formatter.createVisitor(Files.newOutputStream(xml.toPath())));
+            visitors.add(formatter.createVisitor(Files.newOutputStream(xml_.toPath())));
         }
 
-        if (csv != null) {
+        if (csv_ != null) {
             var formatter = new CSVFormatter();
-            visitors.add(formatter.createVisitor(Files.newOutputStream(csv.toPath())));
+            visitors.add(formatter.createVisitor(Files.newOutputStream(csv_.toPath())));
         }
 
-        if (html != null) {
+        if (html_ != null) {
             var formatter = new HTMLFormatter();
-            visitors.add(formatter.createVisitor(new FileMultiReportOutput(html)));
+            visitors.add(formatter.createVisitor(new FileMultiReportOutput(html_)));
         }
 
         return new MultiReportVisitor(visitors);
@@ -341,7 +413,18 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
-        this.sourceFiles.addAll(List.of(sourceFiles));
+        sourceFiles_.addAll(List.of(sourceFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     */
+    public JacocoReportOperation sourceFiles(String... sourceFiles) {
+        sourceFiles_.addAll(Arrays.stream(sourceFiles).map(File::new).toList());
         return this;
     }
 
@@ -352,15 +435,24 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation sourceFiles(Collection<File> sourceFiles) {
-        this.sourceFiles.addAll(sourceFiles);
+        sourceFiles_.addAll(sourceFiles);
         return this;
+    }
+
+    /**
+     * Returns the locations of the source files.
+     *
+     * @return the source files
+     */
+    public Collection<File> sourceFiles() {
+        return sourceFiles_;
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
     private ISourceFileLocator sourceLocator() {
-        var multi = new MultiSourceFileLocator(tabWidth);
-        for (var f : sourceFiles) {
-            multi.add(new DirectorySourceFileLocator(f, encoding, tabWidth));
+        var multi = new MultiSourceFileLocator(tabWidth_);
+        for (var f : sourceFiles_) {
+            multi.add(new DirectorySourceFileLocator(f, encoding_, tabWidth_));
         }
         return multi;
     }
@@ -372,13 +464,13 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation tabWidth(int tabWidth) {
-        this.tabWidth = tabWidth;
+        tabWidth_ = tabWidth;
         return this;
     }
 
     private void writeReports(IBundleCoverage bundle, ExecFileLoader loader)
             throws IOException {
-        if (LOGGER.isLoggable(Level.INFO) && !quiet) {
+        if (LOGGER.isLoggable(Level.INFO) && !quiet_) {
             LOGGER.log(Level.INFO, "Analyzing {0} classes.",
                     bundle.getClassCounter().getTotalCount());
         }
@@ -387,10 +479,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
                 loader.getExecutionDataStore().getContents());
         visitor.visitBundle(bundle, sourceLocator());
         visitor.visitEnd();
-        if (LOGGER.isLoggable(Level.INFO) && !quiet) {
-            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml.toURI().getPath());
-            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv.toURI().getPath());
-            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", html.toURI().getPath());
+        if (LOGGER.isLoggable(Level.INFO) && !quiet_) {
+            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml_.toURI().getPath());
+            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv_.toURI().getPath());
+            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", html_.toURI().getPath());
         }
     }
 
@@ -401,7 +493,17 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation xml(File xml) {
-        this.xml = xml;
+        xml_ = xml;
         return this;
+    }
+
+    /**
+     * Sets the location of the XML report.
+     *
+     * @param xml the report location
+     * @return this operation instance
+     */
+    public JacocoReportOperation xml(String xml) {
+        return xml(new File(xml));
     }
 }
