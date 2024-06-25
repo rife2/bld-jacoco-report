@@ -14,7 +14,7 @@ To run the tests and generate the code coverage reports, add the floowing to you
 
 ```java
 @BuildCommand(summary = "Generates Jacoco Reports")
-public void jacoco() throws IOException {
+public void jacoco() throws Exception {
     new JacocoReportOperation()
             .fromProject(this)
             .execute();

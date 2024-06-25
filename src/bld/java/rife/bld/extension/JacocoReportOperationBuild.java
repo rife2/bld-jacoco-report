@@ -47,8 +47,8 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld", version(1, 9, 1)));
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 2)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 2)))
+                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 10, 3)))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 10, 3)))
                 .include(dependency("org.assertj", "assertj-core", version(3, 26, 0)));
 
         javadocOperation()
@@ -91,7 +91,7 @@ public class JacocoReportOperationBuild extends Project {
     }
 
     @BuildCommand(summary = "Runs PMD analysis")
-    public void pmd() {
+    public void pmd() throws Exception {
         new PmdOperation()
                 .fromProject(this)
                 .failOnViolation(true)

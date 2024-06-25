@@ -18,6 +18,7 @@ package rife.bld.extension;
 
 import org.junit.jupiter.api.Test;
 import rife.bld.Project;
+import rife.bld.operations.exceptions.ExitStatusException;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class JacocoReportOperationTest {
     final File csv;
@@ -52,7 +54,13 @@ class JacocoReportOperationTest {
     }
 
     @Test
-    void executeTest() throws IOException {
+    void executeFailureTest() {
+        var op = new JacocoReportOperation().fromProject(new Project());
+        assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+    }
+
+    @Test
+    void executeTest() throws Exception {
         newJacocoReportOperation().execute();
 
         assertThat(csv).exists();
@@ -64,18 +72,20 @@ class JacocoReportOperationTest {
         }
         assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
 
-        deleteOnExit(tempDir.toFile());
     }
 
     JacocoReportOperation newJacocoReportOperation() {
-        var o = new JacocoReportOperation();
-        o.fromProject(new Project());
-        o.csv(csv);
-        o.html(html);
-        o.xml(xml);
-        o.classFiles(new File("src/test/resources/Examples.class"));
-        o.sourceFiles(new File("examples/src/main/java"));
-        o.execFiles(new File("src/test/resources/jacoco.exec"));
-        return o;
+        var op = new JacocoReportOperation()
+                .fromProject(new Project())
+                .csv(csv)
+                .html(html)
+                .xml(xml)
+                .classFiles(new File("src/test/resources/Examples.class"))
+                .sourceFiles(new File("examples/src/main/java"))
+                .execFiles(new File("src/test/resources/jacoco.exec"));
+
+        deleteOnExit(tempDir.toFile());
+
+        return op;
     }
 }
