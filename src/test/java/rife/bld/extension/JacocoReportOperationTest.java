@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,6 +53,25 @@ class JacocoReportOperationTest {
                 f.deleteOnExit();
             }
         }
+    }
+
+    @Test
+    void checkAllParamsTest() throws IOException {
+        var supported = List.of("<execfiles>",
+                "--classfiles",
+                "--csv",
+                "--encoding",
+                "--html",
+                "--name",
+                "--quiet",
+                "--sourcefiles",
+                "--tabwith",
+                "--xml");
+        var args = Files.readAllLines(Paths.get("src", "test", "resources", "jacoco-args.txt"));
+
+        assertThat(args).isNotEmpty();
+        assertThat(supported).containsAll(args);
+
     }
 
     @Test

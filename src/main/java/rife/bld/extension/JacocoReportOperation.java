@@ -151,22 +151,22 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the location of the CSV report.
      *
-     * @param cvs the report location
+     * @param csv the report location
      * @return this operation instance
      */
-    public JacocoReportOperation csv(File cvs) {
-        csv_ = cvs;
+    public JacocoReportOperation csv(File csv) {
+        csv_ = csv;
         return this;
     }
 
     /**
      * Sets the location of the CSV report.
      *
-     * @param cvs the report location
+     * @param csv the report location
      * @return this operation instance
      */
-    public JacocoReportOperation csv(String cvs) {
-        return csv(new File(cvs));
+    public JacocoReportOperation csv(String csv) {
+        return csv(new File(csv));
     }
 
 

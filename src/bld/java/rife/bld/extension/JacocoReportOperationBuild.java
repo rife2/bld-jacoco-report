@@ -26,7 +26,8 @@ import rife.bld.publish.PublishScm;
 import java.util.List;
 
 import static rife.bld.dependencies.Repository.*;
-import static rife.bld.dependencies.Scope.*;
+import static rife.bld.dependencies.Scope.compile;
+import static rife.bld.dependencies.Scope.test;
 import static rife.bld.operations.JavadocOptions.DocLinkOption.NO_MISSING;
 
 public class JacocoReportOperationBuild extends Project {
@@ -96,5 +97,14 @@ public class JacocoReportOperationBuild extends Project {
                 .failOnViolation(true)
                 .ruleSets("config/pmd.xml")
                 .execute();
+    }
+
+    @Override
+    public void test() throws Exception {
+        new ExecOperation()
+                .fromProject(this)
+                .command("scripts/cliargs.sh")
+                .execute();
+        super.test();
     }
 }
