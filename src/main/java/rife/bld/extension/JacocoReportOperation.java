@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
@@ -111,6 +110,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
+     * @see #classFiles(Collection)
      */
     public JacocoReportOperation classFiles(File... classFiles) {
         classFiles_.addAll(List.of(classFiles));
@@ -122,10 +122,21 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
+     * @see #classFilesStrings(Collection)
      */
     public JacocoReportOperation classFiles(String... classFiles) {
-        classFiles_.addAll(Arrays.stream(classFiles).map(File::new).toList());
-        return this;
+        return classFilesStrings(List.of(classFiles));
+    }
+
+    /**
+     * Sets the locations of Java class files.
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     * @see #classFilesPaths(Collection)
+     */
+    public JacocoReportOperation classFiles(Path... classFiles) {
+        return classFilesPaths(List.of(classFiles));
     }
 
     /**
@@ -142,10 +153,33 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
+     * @see #classFiles(File...)
      */
     public JacocoReportOperation classFiles(Collection<File> classFiles) {
         classFiles_.addAll(classFiles);
         return this;
+    }
+
+    /**
+     * Sets the locations of Java class files.
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     * @see #classFiles(Path...)
+     */
+    public JacocoReportOperation classFilesPaths(Collection<Path> classFiles) {
+        return classFiles(classFiles.stream().map(Path::toFile).toList());
+    }
+
+    /**
+     * Sets the locations of Java class files.
+     *
+     * @param classFiles the class files
+     * @return this operation instance
+     * @see #classFiles(String...)
+     */
+    public JacocoReportOperation classFilesStrings(Collection<String> classFiles) {
+        return classFiles(classFiles.stream().map(File::new).toList());
     }
 
     /**
@@ -169,6 +203,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return csv(new File(csv));
     }
 
+    /**
+     * Sets the location of the CSV report.
+     *
+     * @param csv the report location
+     * @return this operation instance
+     */
+    public JacocoReportOperation csv(Path csv) {
+        return csv(csv.toFile());
+    }
 
     /**
      * Sets the file to write execution data to.
@@ -192,6 +235,16 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
+     * Sets the file to write execution data to.
+     *
+     * @param destFile the file
+     * @return this operation instance
+     */
+    public JacocoReportOperation destFile(Path destFile) {
+        return destFile(destFile.toFile());
+    }
+
+    /**
      * Sets the source file encoding. The platform encoding is used by default.
      *
      * @param encoding the encoding
@@ -207,10 +260,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param execFiles the exec files
      * @return this operation instance
+     * @see #execFiles(Collection)
      */
     public JacocoReportOperation execFiles(File... execFiles) {
-        execFiles_.addAll(List.of(execFiles));
-        return this;
+        return execFiles(List.of(execFiles));
     }
 
     /**
@@ -218,10 +271,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param execFiles the exec files
      * @return this operation instance
+     * @see #execFilesStrings(Collection)
      */
     public JacocoReportOperation execFiles(String... execFiles) {
-        execFiles_.addAll(Arrays.stream(execFiles).map(File::new).toList());
-        return this;
+        return execFilesStrings(List.of(execFiles));
     }
 
     /**
@@ -229,6 +282,18 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param execFiles the exec files
      * @return this operation instance
+     * @see #execFilesPaths(Collection)
+     */
+    public JacocoReportOperation execFiles(Path... execFiles) {
+        return execFilesPaths(List.of(execFiles));
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
+     * @see #execFiles(File...)
      */
     public JacocoReportOperation execFiles(Collection<File> execFiles) {
         execFiles_.addAll(execFiles);
@@ -242,6 +307,28 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public Collection<File> execFiles() {
         return execFiles_;
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
+     * @see #execFiles(Path...)
+     */
+    public JacocoReportOperation execFilesPaths(Collection<Path> execFiles) {
+        return execFiles(execFiles.stream().map(Path::toFile).toList());
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
+     * @see #execFiles(String...)
+     */
+    public JacocoReportOperation execFilesStrings(Collection<String> execFiles) {
+        return execFiles(execFiles.stream().map(File::new).toList());
     }
 
     /**
@@ -343,6 +430,16 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return html(new File(html));
     }
 
+    /**
+     * Sets the location of the HTML report.
+     *
+     * @param html the html
+     * @return this operation instance
+     */
+    public JacocoReportOperation html(Path html) {
+        return html(html.toFile());
+    }
+
     private ExecFileLoader loadExecFiles() throws IOException {
         var loader = new ExecFileLoader();
         if (execFiles_.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !silent()) {
@@ -407,10 +504,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
+     * @see #sourceFiles(Collection)
      */
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
-        sourceFiles_.addAll(List.of(sourceFiles));
-        return this;
+        return sourceFiles(List.of(sourceFiles));
     }
 
     /**
@@ -418,10 +515,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
+     * @see #sourceFilesStrings(Collection)
      */
     public JacocoReportOperation sourceFiles(String... sourceFiles) {
-        sourceFiles_.addAll(Arrays.stream(sourceFiles).map(File::new).toList());
-        return this;
+        return sourceFilesStrings(List.of(sourceFiles));
     }
 
     /**
@@ -429,6 +526,18 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
+     * @see #sourceFilesPaths(Collection)
+     */
+    public JacocoReportOperation sourceFiles(Path... sourceFiles) {
+        return sourceFilesPaths(List.of(sourceFiles));
+    }
+
+    /**
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     * @see #sourceFiles(File...)
      */
     public JacocoReportOperation sourceFiles(Collection<File> sourceFiles) {
         sourceFiles_.addAll(sourceFiles);
@@ -442,6 +551,28 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public Collection<File> sourceFiles() {
         return sourceFiles_;
+    }
+
+    /**
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     * @see #sourceFiles(Path...)
+     */
+    public JacocoReportOperation sourceFilesPaths(Collection<Path> sourceFiles) {
+        return sourceFiles(sourceFiles.stream().map(Path::toFile).toList());
+    }
+
+    /**
+     * Sets the locations of the source files. (e.g., {@code src/main/java})
+     *
+     * @param sourceFiles the source files
+     * @return this operation instance
+     * @see #sourceFiles(String...)
+     */
+    public JacocoReportOperation sourceFilesStrings(Collection<String> sourceFiles) {
+        return sourceFiles(sourceFiles.stream().map(File::new).toList());
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
@@ -501,5 +632,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation xml(String xml) {
         return xml(new File(xml));
+    }
+
+    /**
+     * Sets the location of the XML report.
+     *
+     * @param xml the report location
+     * @return this operation instance
+     */
+    public JacocoReportOperation xml(Path xml) {
+        return xml(xml.toFile());
     }
 }
