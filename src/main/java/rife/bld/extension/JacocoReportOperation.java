@@ -113,8 +113,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFiles(Collection)
      */
     public JacocoReportOperation classFiles(File... classFiles) {
-        classFiles_.addAll(List.of(classFiles));
-        return this;
+        return classFiles(List.of(classFiles));
     }
 
     /**
