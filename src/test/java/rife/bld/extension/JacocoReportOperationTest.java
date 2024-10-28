@@ -16,6 +16,7 @@
 
 package rife.bld.extension;
 
+import org.assertj.core.api.AutoCloseableSoftAssertions;
 import org.junit.jupiter.api.Test;
 import rife.bld.Project;
 import rife.bld.operations.exceptions.ExitStatusException;
@@ -88,9 +89,11 @@ class JacocoReportOperationTest {
         assertThat(csv).exists();
         assertThat(html).isDirectory();
         assertThat(xml).exists();
-        try (var lines = Files.lines(xml.toPath())) {
-            assertThat(lines.anyMatch(s ->
-                    s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+        try (var softly = new AutoCloseableSoftAssertions()) {
+            try (var lines = Files.lines(xml.toPath())) {
+                softly.assertThat(lines.anyMatch(s ->
+                        s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+            }
         }
         assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
 
