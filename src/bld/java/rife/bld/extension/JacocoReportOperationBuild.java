@@ -40,6 +40,7 @@ public class JacocoReportOperationBuild extends Project {
 
         downloadSources = true;
         autoDownloadPurge = true;
+        
         repositories = List.of(MAVEN_LOCAL, MAVEN_CENTRAL, RIFE2_RELEASES, RIFE2_SNAPSHOTS);
 
         var jacocoVersion = new VersionNumber(0, 8, 12);
@@ -60,27 +61,25 @@ public class JacocoReportOperationBuild extends Project {
 
         publishOperation()
                 .repository(version.isSnapshot() ? repository("rife2-snapshot") : repository("rife2"))
+                .repository(repository("github"))
                 .info()
                 .groupId("com.uwyn.rife2")
                 .artifactId("bld-jacoco-report")
                 .description("bld Extension to Generate JaCoCo Code Coverage Reports")
                 .url("https://github.com/rife2/bld-pmd")
-                .developer(
-                        new PublishDeveloper()
-                                .id("ethauvin")
-                                .name("Erik C. Thauvin")
-                                .email("erik@thauvin.net")
-                                .url("https://erik.thauvin.net/")
+                .developer(new PublishDeveloper()
+                        .id("ethauvin")
+                        .name("Erik C. Thauvin")
+                        .email("erik@thauvin.net")
+                        .url("https://erik.thauvin.net/")
                 )
-                .license(
-                        new PublishLicense()
-                                .name("The Apache License, Version 2.0")
-                                .url("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                .license(new PublishLicense()
+                        .name("The Apache License, Version 2.0")
+                        .url("https://www.apache.org/licenses/LICENSE-2.0.txt")
                 )
-                .scm(
-                        new PublishScm().connection("scm:git:https://github.com/rife2/bld-pmd.git")
-                                .developerConnection("scm:git:git@github.com:rife2/bld-pmd.git")
-                                .url("https://github.com/rife2/bld-pmd")
+                .scm(new PublishScm().connection("scm:git:https://github.com/rife2/bld-pmd.git")
+                        .developerConnection("scm:git:git@github.com:rife2/bld-pmd.git")
+                        .url("https://github.com/rife2/bld-pmd")
                 )
                 .signKey(property("sign.key"))
                 .signPassphrase(property("sign.passphrase"));
