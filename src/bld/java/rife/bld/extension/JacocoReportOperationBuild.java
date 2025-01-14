@@ -46,7 +46,7 @@ public class JacocoReportOperationBuild extends Project {
         var jacocoVersion = new VersionNumber(0, 8, 12);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
-                .include(dependency("com.uwyn.rife2", "bld", version(2, 1, 0)));
+                .include(dependency("com.uwyn.rife2", "bld", version(2, 2, 0)));
         scope(test)
                 .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 11, 4)))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 11, 4)))
