@@ -48,9 +48,9 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld", version(2, 2, 0)));
         scope(test)
-                .include(dependency("org.assertj", "assertj-core", version(3, 27, 2)));
                 .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 12, 0)))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 12, 0)))
+                .include(dependency("org.assertj", "assertj-core", version(3, 27, 3)));
 
         javadocOperation()
                 .javadocOptions()
