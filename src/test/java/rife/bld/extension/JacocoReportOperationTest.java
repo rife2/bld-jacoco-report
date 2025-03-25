@@ -18,6 +18,8 @@ package rife.bld.extension;
 
 import org.assertj.core.api.AutoCloseableSoftAssertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import rife.bld.Project;
 import rife.bld.operations.exceptions.ExitStatusException;
 
@@ -58,6 +60,7 @@ class JacocoReportOperationTest {
     }
 
     @Test
+    @EnabledOnOs(OS.LINUX)
     void checkAllParamsTest() throws IOException {
         var supported = List.of("<execfiles>",
                 "--classfiles",

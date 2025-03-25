@@ -100,10 +100,13 @@ public class JacocoReportOperationBuild extends Project {
 
     @Override
     public void test() throws Exception {
-        new ExecOperation()
-                .fromProject(this)
-                .command("scripts/cliargs.sh")
-                .execute();
+        var os = System.getProperty("os.name");
+        if (os != null && os.toLowerCase().contains("linux")) {
+            new ExecOperation()
+                    .fromProject(this)
+                    .command("scripts/cliargs.sh")
+                    .execute();
+        }
         super.test();
     }
 }
