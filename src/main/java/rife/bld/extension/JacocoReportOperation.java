@@ -347,7 +347,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
 
         if (destFile_ == null) {
-            destFile_ = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
+            destFile_ = buildJacocoExec;
         }
 
         if (execFiles_.isEmpty()) {
