@@ -17,6 +17,8 @@
 package rife.bld.extension;
 
 import org.assertj.core.api.AutoCloseableSoftAssertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -61,7 +63,7 @@ class JacocoReportOperationTest {
 
     @Test
     @EnabledOnOs(OS.LINUX)
-    void checkAllParamsTest() throws IOException {
+    void checkAllParams() throws IOException {
         var supported = List.of("<execfiles>",
                 "--classfiles",
                 "--csv",
@@ -79,131 +81,199 @@ class JacocoReportOperationTest {
 
     }
 
-    @Test
-    void executeFailureTest() {
-        var op = new JacocoReportOperation().fromProject(new Project());
-        assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+    @Nested
+    @DisplayName("Execute Tests")
+    class ExecuteTests {
+        JacocoReportOperation newJacocoReportOperation() {
+            var op = new JacocoReportOperation()
+                    .fromProject(new Project())
+                    .csv(csv)
+                    .html(html)
+                    .xml(xml)
+                    .classFiles(new File("src/test/resources/Examples.class"))
+                    .sourceFiles(new File("examples/src/main/java"))
+                    .execFiles(new File("src/test/resources/jacoco.exec"));
+
+            deleteOnExit(tempDir.toFile());
+
+            return op;
+        }
+
+        @Test
+        void execute() throws Exception {
+            newJacocoReportOperation().execute();
+
+            assertThat(csv).exists();
+            assertThat(html).isDirectory();
+            assertThat(xml).exists();
+            try (var softly = new AutoCloseableSoftAssertions()) {
+                try (var lines = Files.lines(xml.toPath())) {
+                    softly.assertThat(lines.anyMatch(s ->
+                            s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+                }
+            }
+            assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
+        }
+
+        @Test
+        void executeFailure() {
+            var op = new JacocoReportOperation().fromProject(new Project());
+            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+        }
     }
 
-    @Test
-    void executeTest() throws Exception {
-        newJacocoReportOperation().execute();
+    @Nested
+    @DisplayName("File Operation Tests")
+    class FilesOperationTests {
+        private final File bar = new File("bar");
+        private final File foo = new File("foo");
+        private final JacocoReportOperation op = new JacocoReportOperation();
 
-        assertThat(csv).exists();
-        assertThat(html).isDirectory();
-        assertThat(xml).exists();
-        try (var softly = new AutoCloseableSoftAssertions()) {
-            try (var lines = Files.lines(xml.toPath())) {
-                softly.assertThat(lines.anyMatch(s ->
-                        s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+        @Nested
+        @DisplayName("Class Files Tests")
+        class ClassFilesTests {
+            @Test
+            void classFilesAsFileArray() {
+                op.classFiles().clear();
+                op.classFiles(foo, bar);
+                assertThat(op.classFiles()).contains(foo, bar);
+            }
+
+            @Test
+            void classFilesAsFileList() {
+                op.classFiles().clear();
+                op.classFiles(List.of(foo, bar));
+                assertThat(op.classFiles()).contains(foo, bar);
+            }
+
+            @Test
+            void classFilesAsPathArray() {
+                op.classFiles().clear();
+                op.classFiles(foo.toPath(), bar.toPath());
+                assertThat(op.classFiles()).contains(foo, bar);
+            }
+
+            @Test
+            void classFilesAsPathList() {
+                op.classFiles().clear();
+                op.classFilesPaths(List.of(foo.toPath(), bar.toPath()));
+                assertThat(op.classFiles()).contains(foo, bar);
+            }
+
+            @Test
+            void classFilesAsStringArray() {
+                op.classFiles().clear();
+                op.classFiles("foo", "bar");
+                assertThat(op.classFiles()).contains(foo, bar);
+            }
+
+            @Test
+            void classFilesAsStringList() {
+                op.classFiles().clear();
+                op.classFilesStrings(List.of("foo", "bar"));
+                assertThat(op.classFiles()).contains(foo, bar);
             }
         }
-        assertThat(Path.of(html.getPath(), "com.example", "Examples.java.html")).exists();
 
-    }
+        @Nested
+        @DisplayName("Exec Files Tests")
+        class ExecFilesTests {
+            private final File bar = new File("bar");
+            private final File foo = new File("foo");
+            private final JacocoReportOperation op = new JacocoReportOperation();
 
-    JacocoReportOperation newJacocoReportOperation() {
-        var op = new JacocoReportOperation()
-                .fromProject(new Project())
-                .csv(csv)
-                .html(html)
-                .xml(xml)
-                .classFiles(new File("src/test/resources/Examples.class"))
-                .sourceFiles(new File("examples/src/main/java"))
-                .execFiles(new File("src/test/resources/jacoco.exec"));
+            @Test
+            void execFilesAsFileArray() {
+                op.execFiles().clear();
+                op.execFiles(foo, bar);
+                assertThat(op.execFiles()).contains(foo, bar);
+            }
 
-        deleteOnExit(tempDir.toFile());
+            @Test
+            void execFilesAsFileList() {
+                op.execFiles().clear();
+                op.execFiles(List.of(foo, bar));
+                assertThat(op.execFiles()).contains(foo, bar);
+            }
 
-        return op;
-    }
+            @Test
+            void execFilesAsPathArray() {
+                op.execFiles().clear();
+                op.execFiles(foo.toPath(), bar.toPath());
+                assertThat(op.execFiles()).contains(foo, bar);
+            }
 
-    @Test
-    void testClassFiles() {
-        var foo = new File("foo");
-        var bar = new File("bar");
+            @Test
+            void execFilesAsPathList() {
+                op.execFiles().clear();
+                op.execFilesPaths(List.of(foo.toPath(), bar.toPath()));
+                assertThat(op.execFiles()).contains(foo, bar);
+                op.execFiles().clear();
+            }
 
-        var op = new JacocoReportOperation().classFiles("foo", "bar");
-        assertThat(op.classFiles()).as("String...").contains(foo, bar);
-        op.classFiles().clear();
+            @Test
+            void execFilesAsStringArray() {
+                op.execFiles().clear();
+                op.execFiles("foo", "bar");
+                assertThat(op.execFiles()).contains(foo, bar);
+            }
 
-        op = op.classFiles(foo, bar);
-        assertThat(op.classFiles()).as("File...").contains(foo, bar);
-        op.classFiles().clear();
+            @Test
+            void execFilesAsStringList() {
+                op.execFiles().clear();
+                op.execFilesStrings(List.of("foo", "bar"));
+                assertThat(op.execFiles()).contains(foo, bar);
+            }
+        }
 
-        op = op.classFiles(foo.toPath(), bar.toPath());
-        assertThat(op.classFiles()).as("Path...").contains(foo, bar);
-        op.classFiles().clear();
+        @Nested
+        @DisplayName("Source Files Tests")
+        class SourceFilesTests {
+            private final File bar = new File("bar");
+            private final File foo = new File("foo");
+            private final JacocoReportOperation op = new JacocoReportOperation();
 
-        op = op.classFilesStrings(List.of("foo", "bar"));
-        assertThat(op.classFiles()).as("List(String...)").contains(foo, bar);
-        op.classFiles().clear();
+            @Test
+            void sourceFilesAsFileArray() {
+                op.sourceFiles().clear();
+                op.sourceFiles(foo, bar);
+                assertThat(op.sourceFiles()).as("File...").contains(foo, bar);
+            }
 
-        op = op.classFiles(List.of(foo, bar));
-        assertThat(op.classFiles()).as("File...").contains(foo, bar);
-        op.classFiles().clear();
+            @Test
+            void sourceFilesAsFileList() {
+                op.sourceFiles().clear();
+                op.sourceFiles(List.of(foo, bar));
+                assertThat(op.sourceFiles()).as("File...").contains(foo, bar);
+            }
 
-        op = op.classFilesPaths(List.of(foo.toPath(), bar.toPath()));
-        assertThat(op.classFiles()).as("Path...").contains(foo, bar);
-        op.classFiles().clear();
-    }
+            @Test
+            void sourceFilesAsPathList() {
+                op.sourceFiles().clear();
+                op.sourceFilesPaths(List.of(foo.toPath(), bar.toPath()));
+                assertThat(op.sourceFiles()).as("Path...").contains(foo, bar);
+            }
 
-    @Test
-    void testExecFiles() {
-        var foo = new File("foo");
-        var bar = new File("bar");
+            @Test
+            void sourceFilesAsStringArray() {
+                op.sourceFiles().clear();
+                op.sourceFiles("foo", "bar");
+                assertThat(op.sourceFiles()).as("String...").contains(foo, bar);
+            }
 
-        var op = new JacocoReportOperation().execFiles("foo", "bar");
-        assertThat(op.execFiles()).as("String...").contains(foo, bar);
-        op.execFiles().clear();
+            @Test
+            void sourceFilesAsStringList() {
+                op.sourceFiles().clear();
+                op.sourceFilesStrings(List.of("foo", "bar"));
+                assertThat(op.sourceFiles()).as("List(String...)").contains(foo, bar);
+            }
 
-        op = op.execFiles(foo, bar);
-        assertThat(op.execFiles()).as("File...").contains(foo, bar);
-        op.execFiles().clear();
-
-        op = op.execFiles(foo.toPath(), bar.toPath());
-        assertThat(op.execFiles()).as("Path...").contains(foo, bar);
-        op.execFiles().clear();
-
-        op = op.execFilesStrings(List.of("foo", "bar"));
-        assertThat(op.execFiles()).as("List(String...)").contains(foo, bar);
-        op.execFiles().clear();
-
-        op = op.execFiles(List.of(foo, bar));
-        assertThat(op.execFiles()).as("File...").contains(foo, bar);
-        op.execFiles().clear();
-
-        op = op.execFilesPaths(List.of(foo.toPath(), bar.toPath()));
-        assertThat(op.execFiles()).as("Path...").contains(foo, bar);
-        op.execFiles().clear();
-    }
-
-    @Test
-    void testSourceFiles() {
-        var foo = new File("foo");
-        var bar = new File("bar");
-
-        var op = new JacocoReportOperation().sourceFiles("foo", "bar");
-        assertThat(op.sourceFiles()).as("String...").contains(foo, bar);
-        op.sourceFiles().clear();
-
-        op = op.sourceFiles(foo, bar);
-        assertThat(op.sourceFiles()).as("File...").contains(foo, bar);
-        op.sourceFiles().clear();
-
-        op = op.sourceFiles(foo.toPath(), bar.toPath());
-        assertThat(op.sourceFiles()).as("Path...").contains(foo, bar);
-        op.sourceFiles().clear();
-
-        op = op.sourceFilesStrings(List.of("foo", "bar"));
-        assertThat(op.sourceFiles()).as("List(String...)").contains(foo, bar);
-        op.sourceFiles().clear();
-
-        op = op.sourceFiles(List.of(foo, bar));
-        assertThat(op.sourceFiles()).as("File...").contains(foo, bar);
-        op.sourceFiles().clear();
-
-        op = op.sourceFilesPaths(List.of(foo.toPath(), bar.toPath()));
-        assertThat(op.sourceFiles()).as("Path...").contains(foo, bar);
-        op.sourceFiles().clear();
+            @Test
+            void sourceFilesPathArray() {
+                op.sourceFiles().clear();
+                op.sourceFiles(foo.toPath(), bar.toPath());
+                assertThat(op.sourceFiles()).as("Path...").contains(foo, bar);
+            }
+        }
     }
 }

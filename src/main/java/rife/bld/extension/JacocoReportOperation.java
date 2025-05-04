@@ -411,7 +411,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the location of the HTML report.
      *
-     * @param html the html
+     * @param html the HTML
      * @return this operation instance
      */
     public JacocoReportOperation html(File html) {
@@ -422,7 +422,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the location of the HTML report.
      *
-     * @param html the html
+     * @param html the HTML
      * @return this operation instance
      */
     public JacocoReportOperation html(String html) {
@@ -432,7 +432,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the location of the HTML report.
      *
-     * @param html the html
+     * @param html the HTML
      * @return this operation instance
      */
     public JacocoReportOperation html(Path html) {
