@@ -123,6 +123,7 @@ class JacocoReportOperationTest {
     }
 
 
+    @Nested
     @DisplayName("Options Tests")
     class OptionsTests {
         public static final String FOO = "foo";
@@ -220,6 +221,26 @@ class JacocoReportOperationTest {
             var op = new JacocoReportOperation();
             op.xml(FOO);
             assertThat(op.xml()).isEqualTo(fooFile);
+        }
+
+        @Nested
+        @DisplayName("Test Tool Options Tests")
+        class TestToolOptionsTests {
+            public static final String BAR = "bar";
+
+            @Test
+            void testToolOptionsAsArray() {
+                var op = new JacocoReportOperation();
+                op = op.testToolOptions(FOO, BAR);
+                assertThat(op.testToolOptions()).contains(FOO, BAR);
+            }
+
+            @Test
+            void testToolOptionsAsList() {
+                var op = new JacocoReportOperation();
+                op.testToolOptions(List.of(FOO, BAR));
+                assertThat(op.testToolOptions()).contains(FOO, BAR);
+            }
         }
     }
 

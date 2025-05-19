@@ -62,6 +62,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     final private Collection<File> sourceFiles_ = new ArrayList<>();
     /**
+     * The test tool options.
+     */
+    final private Collection<String> testToolOptions_ = new ArrayList<>();
+    /**
      * The location of the CSV report.
      */
     private File csv_;
@@ -213,6 +217,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
+     * Returns the CSV report location.
+     *
+     * @return the CSV report location
+     */
+    public File csv() {
+        return csv_;
+    }
+
+    /**
      * Sets the file to write execution data to.
      *
      * @param destFile the file
@@ -244,6 +257,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
+     * Returns the file to write execution data to.
+     *
+     * @return the file to write execution data to
+     */
+    public File destFile() {
+        return destFile_;
+    }
+
+    /**
      * Sets the source file encoding. The platform encoding is used by default.
      *
      * @param encoding the encoding
@@ -252,6 +274,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     public JacocoReportOperation encoding(String encoding) {
         encoding_ = encoding;
         return this;
+    }
+
+    /**
+     * Returns the source file encoding.
+     *
+     * @return the source file encoding
+     */
+    public String encoding() {
+        return encoding_;
     }
 
     /**
@@ -356,6 +387,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
                     "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
                             + "-runtime.jar").toFile(), "destfile=" + destFile_.getPath());
 
+            if (!testToolOptions_.isEmpty()) {
+                testOperation.testToolOptions().addAll(testToolOptions_);
+            }
+
             testOperation.execute();
 
             if (LOGGER.isLoggable(Level.INFO) && !silent()) {
@@ -439,6 +474,24 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return html(html.toFile());
     }
 
+    /**
+     * Returns the HTML report location.
+     *
+     * @return the HTML report location
+     */
+    public File html() {
+        return html_;
+    }
+
+    /**
+     * Return the status of the quiet flag.
+     *
+     * @return {@code true} if enabled, {@code false} otherwise
+     */
+    public boolean isQuiet() {
+        return silent();
+    }
+
     private ExecFileLoader loadExecFiles() throws IOException {
         var loader = new ExecFileLoader();
         if (execFiles_.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !silent()) {
@@ -464,6 +517,15 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     public JacocoReportOperation name(String name) {
         reportName_ = name;
         return this;
+    }
+
+    /**
+     * Returns the name used for the report.
+     *
+     * @return the report name.
+     */
+    public String name() {
+        return reportName_;
     }
 
     /**
@@ -594,6 +656,47 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return this;
     }
 
+    /**
+     * Returns the tab stop width for the source pages.
+     *
+     * @return the tab stop width
+     */
+    public int tabWidth() {
+        return tabWidth_;
+    }
+
+    /**
+     * Returns the test tool options.
+     *
+     * @return the test tool options
+     */
+    public Collection<String> testToolOptions() {
+        return testToolOptions_;
+    }
+
+    /**
+     * Sets the test tool options.
+     *
+     * @param options The options to set
+     * @return this operation instance
+     * @see #testToolOptions(Collection)
+     */
+    public JacocoReportOperation testToolOptions(String... options) {
+        return testToolOptions(List.of(options));
+    }
+
+    /**
+     * Sets the test tool options.
+     *
+     * @param options The options to set
+     * @return this operation instance
+     * @see #testToolOptions(String...)
+     */
+    public JacocoReportOperation testToolOptions(Collection<String> options) {
+        testToolOptions_.addAll(options);
+        return this;
+    }
+
     private void writeReports(IBundleCoverage bundle, ExecFileLoader loader)
             throws IOException {
         if (LOGGER.isLoggable(Level.INFO) && !silent()) {
@@ -641,5 +744,14 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation xml(Path xml) {
         return xml(xml.toFile());
+    }
+
+    /**
+     * Returns the XML report location.
+     *
+     * @return the XML report location
+     */
+    public File xml() {
+        return xml_;
     }
 }
