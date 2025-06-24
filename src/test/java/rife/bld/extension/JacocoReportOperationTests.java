@@ -37,13 +37,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
-class JacocoReportOperationTest {
+class JacocoReportOperationTests {
     final File csvFile;
     final File htmlDir;
     final Path tempDir;
     final File xmlFile;
 
-    JacocoReportOperationTest() throws IOException {
+    JacocoReportOperationTests() throws IOException {
         tempDir = Files.createTempDirectory("jacoco-test");
         csvFile = (new File(tempDir.toFile(), "jacoco.csv"));
         htmlDir = (new File(tempDir.toFile(), "html"));
