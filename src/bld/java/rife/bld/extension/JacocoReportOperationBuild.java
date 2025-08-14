@@ -48,12 +48,19 @@ public class JacocoReportOperationBuild extends Project {
 
         var jacocoVersion = new VersionNumber(0, 8, 13);
         scope(compile)
-                .include(dependency("org.jacoco", "jacoco", jacocoVersion).exclude("*", "org.jacoco.doc"))
-                .include(dependency("com.uwyn.rife2", "bld", version(2, 3, 0)));
+                .include(dependency("org.jacoco", "jacoco", jacocoVersion)
+                        .exclude("*", "org.jacoco.doc"))
+                .include(dependency("com.uwyn.rife2", "bld",
+                        version(2, 3, 0)));
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(5, 13, 4)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(1, 13, 4)))
-                .include(dependency("org.assertj", "assertj-core", version(3, 27, 4)));
+                .include(dependency("com.uwyn.rife2", "bld-extensions-testing-helpers",
+                        version(0, 9, 0, "SNAPSHOT")))
+                .include(dependency("org.junit.jupiter", "junit-jupiter",
+                        version(5, 13, 4)))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone",
+                        version(1, 13, 4)))
+                .include(dependency("org.assertj", "assertj-core",
+                        version(3, 27, 4)));
 
         javadocOperation()
                 .javadocOptions()
@@ -68,7 +75,7 @@ public class JacocoReportOperationBuild extends Project {
                 .info()
                 .groupId("com.uwyn.rife2")
                 .artifactId("bld-jacoco-report")
-                .description("bld Extension to Generate JaCoCo Code Coverage Reports")
+                .description("JaCoCo Code Coverage Extension for bld")
                 .url("https://github.com/rife2/bld-pmd")
                 .developer(new PublishDeveloper()
                         .id("ethauvin")

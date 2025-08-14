@@ -98,12 +98,13 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     private File xml_;
 
-
     private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
         var builder = new CoverageBuilder();
         var analyzer = new Analyzer(data, builder);
         for (var f : classFiles_) {
-            LOGGER.info(f.getAbsolutePath());
+            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+                LOGGER.info(f.getAbsolutePath());
+            }
             analyzer.analyzeAll(f);
         }
         return builder.getBundle(reportName_);
@@ -542,20 +543,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     private IReportVisitor reportVisitor() throws IOException {
         List<IReportVisitor> visitors = new ArrayList<>();
 
-        if (xml_ != null) {
-            var formatter = new XMLFormatter();
-            visitors.add(formatter.createVisitor(Files.newOutputStream(xml_.toPath())));
-        }
-
-        if (csv_ != null) {
-            var formatter = new CSVFormatter();
-            visitors.add(formatter.createVisitor(Files.newOutputStream(csv_.toPath())));
-        }
-
-        if (html_ != null) {
-            var formatter = new HTMLFormatter();
-            visitors.add(formatter.createVisitor(new FileMultiReportOutput(html_)));
-        }
+        visitors.add(new XMLFormatter().createVisitor(Files.newOutputStream(xml_.toPath())));
+        visitors.add(new CSVFormatter().createVisitor(Files.newOutputStream(csv_.toPath())));
+        visitors.add(new HTMLFormatter().createVisitor(new FileMultiReportOutput(html_)));
 
         return new MultiReportVisitor(visitors);
     }
@@ -703,7 +693,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             LOGGER.log(Level.INFO, "Analyzing {0} classes.",
                     bundle.getClassCounter().getTotalCount());
         }
-        IReportVisitor visitor = reportVisitor();
+        var visitor = reportVisitor();
         visitor.visitInfo(loader.getSessionInfoStore().getInfos(),
                 loader.getExecutionDataStore().getContents());
         visitor.visitBundle(bundle, sourceLocator());

@@ -17,12 +17,13 @@
 package rife.bld.extension;
 
 import org.assertj.core.api.AutoCloseableSoftAssertions;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.io.TempDir;
 import rife.bld.Project;
+import rife.bld.blueprints.BaseProjectBlueprint;
+import rife.bld.extension.testing.TestLogHandler;
 import rife.bld.operations.exceptions.ExitStatusException;
 
 import java.io.File;
@@ -31,34 +32,33 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-@SuppressWarnings("PMD.AvoidDuplicateLiterals")
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.SignatureDeclareThrowsException", "PMD.TestClassWithoutTestCases"})
 class JacocoReportOperationTests {
-    final File csvFile;
-    final File htmlDir;
-    final Path tempDir;
-    final File xmlFile;
+    @SuppressWarnings("LoggerInitializedWithForeignClass")
+    private final Logger logger = Logger.getLogger(JacocoReportOperation.class.getName());
+    private File csvFile;
+    private File htmlDir;
+    private TestLogHandler logHandler;
+    @TempDir
+    private File tempDir;
+    private File xmlFile;
 
-    JacocoReportOperationTests() throws IOException {
-        tempDir = Files.createTempDirectory("jacoco-test");
-        csvFile = (new File(tempDir.toFile(), "jacoco.csv"));
-        htmlDir = (new File(tempDir.toFile(), "html"));
-        xmlFile = (new File(tempDir.toFile(), "jacoco.xml"));
-    }
+    @BeforeEach
+    void beforeEach() {
+        csvFile = (new File(tempDir, "jacoco.csv"));
+        htmlDir = (new File(tempDir, "html"));
+        xmlFile = (new File(tempDir, "jacoco.xml"));
 
-    static void deleteOnExit(File folder) {
-        folder.deleteOnExit();
-        for (var f : Objects.requireNonNull(folder.listFiles())) {
-            if (f.isDirectory()) {
-                deleteOnExit(f);
-            } else {
-                f.deleteOnExit();
-            }
-        }
+        logHandler = new TestLogHandler();
+        logger.addHandler(logHandler);
+        logger.setLevel(Level.ALL);
+        logHandler.setLevel(Level.ALL);
     }
 
     @Test
@@ -79,6 +79,51 @@ class JacocoReportOperationTests {
         assertThat(args).isNotEmpty();
         assertThat(supported).containsAll(args);
 
+    }
+
+    @Test
+    void fluentConfiguration() {
+        var csvFile = new File("report.csv");
+        var htmlDir = new File("report/html");
+        var xmlFile = new File("report.xml");
+        var destFile = new File("jacoco.exec");
+        var sourceFile = new File("src/main/java");
+        var classFile = new File("build/classes");
+        var execFile = new File("build/jacoco.exec");
+
+        var op = new JacocoReportOperation()
+                .csv(csvFile)
+                .html(htmlDir)
+                .xml(xmlFile)
+                .destFile(destFile)
+                .encoding("UTF-16")
+                .name("My Custom Report")
+                .tabWidth(2)
+                .quiet(true)
+                .sourceFiles(sourceFile)
+                .classFiles(classFile)
+                .execFiles(execFile)
+                .testToolOptions("-v", "--fail-fast");
+
+        assertThat(op.csv()).isEqualTo(csvFile);
+        assertThat(op.html()).isEqualTo(htmlDir);
+        assertThat(op.xml()).isEqualTo(xmlFile);
+        assertThat(op.destFile()).isEqualTo(destFile);
+        assertThat(op.encoding()).isEqualTo("UTF-16");
+        assertThat(op.name()).isEqualTo("My Custom Report");
+        assertThat(op.tabWidth()).isEqualTo(2);
+        assertThat(op.isQuiet()).isTrue();
+        assertThat(op.sourceFiles()).containsExactly(sourceFile);
+        assertThat(op.classFiles()).containsExactly(classFile);
+        assertThat(op.execFiles()).containsExactly(execFile);
+        assertThat(op.testToolOptions()).containsExactly("-v", "--fail-fast");
+    }
+
+    @AfterEach
+    void teardownLogging() {
+        if (logHandler != null) {
+            logger.removeHandler(logHandler);
+        }
     }
 
     @Nested
@@ -103,11 +148,129 @@ class JacocoReportOperationTests {
         @Test
         void executeFailure() {
             var op = new JacocoReportOperation().fromProject(new Project());
+
             assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
         }
 
-        JacocoReportOperation newJacocoReportOperation() {
+        @Test
+        void executeFailureWhenProjectNotSet() {
+            var op = new JacocoReportOperation();
+            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+        }
+
+        @Test
+        void executeFailureWhenProjectNotSetAndLoggingDisabled() {
+            logger.setLevel(Level.OFF);
+            var op = new JacocoReportOperation();
+            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeFailureWhenProjectNotSetAndSilent() {
+            var op = new JacocoReportOperation().silent(true);
+            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithDestFile() throws Exception {
+            var destFile = new File("examples/build/jacoco/jacoco.exec");
+            var op = newJacocoReportOperation().destFile(destFile);
+            op.execute();
+            assertThat(destFile).exists();
+        }
+
+        @Test
+        void executeWithEmptyClassFiles() {
+            var op = newJacocoReportOperation();
+            op.classFiles().clear();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+        }
+
+        @Test
+        void executeWithEmptyExecFilesAndTestToolOptions() {
+            var project = new BaseProjectBlueprint(new File("examples"), "com.example",
+                    "examples", "Examples");
             var op = new JacocoReportOperation()
+                    .fromProject(project)
+                    .testToolOptions("--details=summary");
+            op.execFiles().clear();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+        }
+
+        @Test
+        void executeWithEmptyExecFilesWithLoggingDisabled() {
+            logger.setLevel(Level.OFF);
+            var project = new BaseProjectBlueprint(new File("examples"), "com.example",
+                    "examples", "Examples");
+            var op = new JacocoReportOperation().fromProject(project);
+            op.execFiles().clear();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithEmptyExecFilesWithSilent() {
+            var project = new BaseProjectBlueprint(new File("examples"), "com.example",
+                    "examples", "Examples");
+            var op = new JacocoReportOperation()
+                    .silent(true)
+                    .fromProject(project);
+            op.execFiles().clear();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithEmptySourceFiles() {
+            var op = newJacocoReportOperation();
+            op.sourceFiles().clear();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+        }
+
+        @Test
+        void executeWithLoggingDisabled() throws Exception {
+            logger.setLevel(Level.OFF);
+            newJacocoReportOperation().execute();
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithNullCsvFile() throws Exception {
+            var op = newJacocoReportOperation().csv((File) null);
+            op.execute();
+            assertThat(new File("examples/build/reports/jacoco/test/jacocoTestReport.csv")).exists();
+        }
+
+        @Test
+        void executeWithNullHtmlFile() throws Exception {
+            var op = newJacocoReportOperation().html((File) null);
+            op.execute();
+            assertThat(new File("examples/build/reports/jacoco/test/html/index.html")).exists();
+        }
+
+        @Test
+        void executeWithNullXmlFile() throws Exception {
+            var op = newJacocoReportOperation().xml((File) null);
+            op.execute();
+            assertThat(new File("examples/build/reports/jacoco/test/jacocoTestReport.xml")).exists();
+        }
+
+        @Test
+        void executeWithQuiet() throws Exception {
+            newJacocoReportOperation().quiet(true).execute();
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithSilent() throws Exception {
+            newJacocoReportOperation().silent(true).execute();
+            assertThat(logHandler.getLogMessages()).isEmpty();
+        }
+
+        JacocoReportOperation newJacocoReportOperation() {
+            return new JacocoReportOperation()
                     .fromProject(new Project())
                     .csv(csvFile)
                     .html(htmlDir)
@@ -115,132 +278,6 @@ class JacocoReportOperationTests {
                     .classFiles(new File("src/test/resources/Examples.class"))
                     .sourceFiles(new File("examples/src/main/java"))
                     .execFiles(new File("src/test/resources/jacoco.exec"));
-
-            deleteOnExit(tempDir.toFile());
-
-            return op;
-        }
-    }
-
-
-    @Nested
-    @DisplayName("Options Tests")
-    class OptionsTests {
-        public static final String FOO = "foo";
-        private final File fooFile = new File(FOO);
-
-        @Test
-        void csvAsFile() {
-            var op = new JacocoReportOperation();
-            op.csv(fooFile);
-            assertThat(op.csv()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void csvAsPath() {
-            var fooPath = fooFile.toPath();
-            var op = new JacocoReportOperation();
-            op.csv(fooPath);
-            assertThat(op.csv()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void csvAsString() {
-            var op = new JacocoReportOperation();
-            op.csv(FOO);
-            assertThat(op.csv()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void htmlAsFile() {
-            var op = new JacocoReportOperation();
-            op.html(fooFile);
-            assertThat(op.html()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void htmlAsPath() {
-            var fooPath = fooFile.toPath();
-            var op = new JacocoReportOperation();
-            op.html(fooPath);
-            assertThat(op.html()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void htmlAsString() {
-            var op = new JacocoReportOperation();
-            op.html(FOO);
-            assertThat(op.html()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void quietIsFalse() {
-            var op = new JacocoReportOperation();
-            op.quiet(false);
-            assertThat(op.isQuiet()).isFalse();
-        }
-
-        @Test
-        void quietIsTrue() {
-            var op = new JacocoReportOperation();
-            op.quiet(true);
-            assertThat(op.isQuiet()).isTrue();
-        }
-
-        @Test
-        void reportName() {
-            var op = new JacocoReportOperation();
-            op.name(FOO);
-            assertThat(op.name()).isEqualTo(FOO);
-        }
-
-        @Test
-        void tabWidth() {
-            var op = new JacocoReportOperation();
-            op.tabWidth(4);
-            assertThat(op.tabWidth()).isEqualTo(4);
-        }
-
-        @Test
-        void xmlAsFile() {
-            var op = new JacocoReportOperation();
-            op.xml(fooFile);
-            assertThat(op.xml()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void xmlAsPath() {
-            var fooPath = fooFile.toPath();
-            var op = new JacocoReportOperation();
-            op.xml(fooPath);
-            assertThat(op.xml()).isEqualTo(fooFile);
-        }
-
-        @Test
-        void xmlAsString() {
-            var op = new JacocoReportOperation();
-            op.xml(FOO);
-            assertThat(op.xml()).isEqualTo(fooFile);
-        }
-
-        @Nested
-        @DisplayName("Test Tool Options Tests")
-        class TestToolOptionsTests {
-            public static final String BAR = "bar";
-
-            @Test
-            void testToolOptionsAsArray() {
-                var op = new JacocoReportOperation();
-                op = op.testToolOptions(FOO, BAR);
-                assertThat(op.testToolOptions()).contains(FOO, BAR);
-            }
-
-            @Test
-            void testToolOptionsAsList() {
-                var op = new JacocoReportOperation();
-                op.testToolOptions(List.of(FOO, BAR));
-                assertThat(op.testToolOptions()).contains(FOO, BAR);
-            }
         }
     }
 
@@ -300,6 +337,29 @@ class JacocoReportOperationTests {
                 assertThat(op.classFiles()).isEmpty();
                 op.classFilesStrings(List.of("foo", "bar"));
                 assertThat(op.classFiles()).contains(fooFile, barFile);
+            }
+        }
+
+        @Nested
+        @DisplayName("Dest File Tests")
+        class DestFileTests {
+            @Test
+            void destFileAsFile() {
+                op.destFile(fooFile);
+                assertThat(op.destFile()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void destFileAsPath() {
+                var fooPath = fooFile.toPath();
+                op.destFile(fooPath);
+                assertThat(op.destFile()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void destFileAsString() {
+                op.destFile("foo");
+                assertThat(op.destFile()).isEqualTo(fooFile);
             }
         }
 
@@ -413,6 +473,150 @@ class JacocoReportOperationTests {
                 assertThat(op.sourceFiles()).isEmpty();
                 op.sourceFiles(fooFile.toPath(), barFile.toPath());
                 assertThat(op.sourceFiles()).as("Path...").contains(fooFile, barFile);
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("Options Tests")
+    class OptionsTests {
+        public static final String FOO = "foo";
+        private final File fooFile = new File(FOO);
+
+        @Test
+        void encoding() {
+            var op = new JacocoReportOperation();
+            op.encoding("UTF-8");
+            assertThat(op.encoding()).isEqualTo("UTF-8");
+        }
+
+        @Test
+        void reportName() {
+            var op = new JacocoReportOperation();
+            op.name(FOO);
+            assertThat(op.name()).isEqualTo(FOO);
+        }
+
+        @Test
+        void tabWidth() {
+            var op = new JacocoReportOperation();
+            op.tabWidth(4);
+            assertThat(op.tabWidth()).isEqualTo(4);
+        }
+
+        @Nested
+        @DisplayName("CSV Tests")
+        class CsvTests {
+            @Test
+            void csvAsFile() {
+                var op = new JacocoReportOperation();
+                op.csv(fooFile);
+                assertThat(op.csv()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void csvAsPath() {
+                var fooPath = fooFile.toPath();
+                var op = new JacocoReportOperation();
+                op.csv(fooPath);
+                assertThat(op.csv()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void csvAsString() {
+                var op = new JacocoReportOperation();
+                op.csv(FOO);
+                assertThat(op.csv()).isEqualTo(fooFile);
+            }
+        }
+
+        @Nested
+        @DisplayName("HTML Tests")
+        class HtmlTests {
+            @Test
+            void htmlAsFile() {
+                var op = new JacocoReportOperation();
+                op.html(fooFile);
+                assertThat(op.html()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void htmlAsPath() {
+                var fooPath = fooFile.toPath();
+                var op = new JacocoReportOperation();
+                op.html(fooPath);
+                assertThat(op.html()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void htmlAsString() {
+                var op = new JacocoReportOperation();
+                op.html(FOO);
+                assertThat(op.html()).isEqualTo(fooFile);
+            }
+        }
+
+        @Nested
+        @DisplayName("Quiet Tests")
+        class QuietTests {
+            @Test
+            void quietIsFalse() {
+                var op = new JacocoReportOperation();
+                op.quiet(false);
+                assertThat(op.isQuiet()).isFalse();
+            }
+
+            @Test
+            void quietIsTrue() {
+                var op = new JacocoReportOperation();
+                op.quiet(true);
+                assertThat(op.isQuiet()).isTrue();
+            }
+        }
+
+        @Nested
+        @DisplayName("Test Tool Options Tests")
+        class TestToolOptionsTests {
+            public static final String BAR = "bar";
+
+            @Test
+            void testToolOptionsAsArray() {
+                var op = new JacocoReportOperation();
+                op = op.testToolOptions(FOO, BAR);
+                assertThat(op.testToolOptions()).contains(FOO, BAR);
+            }
+
+            @Test
+            void testToolOptionsAsList() {
+                var op = new JacocoReportOperation();
+                op.testToolOptions(List.of(FOO, BAR));
+                assertThat(op.testToolOptions()).contains(FOO, BAR);
+            }
+        }
+
+        @Nested
+        @DisplayName("XML Tests")
+        class XmlTests {
+            @Test
+            void xmlAsFile() {
+                var op = new JacocoReportOperation();
+                op.xml(fooFile);
+                assertThat(op.xml()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void xmlAsPath() {
+                var fooPath = fooFile.toPath();
+                var op = new JacocoReportOperation();
+                op.xml(fooPath);
+                assertThat(op.xml()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void xmlAsString() {
+                var op = new JacocoReportOperation();
+                op.xml(FOO);
+                assertThat(op.xml()).isEqualTo(fooFile);
             }
         }
     }
