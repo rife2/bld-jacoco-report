@@ -4,7 +4,6 @@ import rife.bld.BuildCommand;
 import rife.bld.Project;
 import rife.bld.extension.JacocoReportOperation;
 
-import java.io.IOException;
 import java.util.List;
 
 import static rife.bld.dependencies.Repository.MAVEN_CENTRAL;
