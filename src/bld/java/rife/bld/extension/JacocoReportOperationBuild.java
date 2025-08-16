@@ -129,7 +129,7 @@ public class JacocoReportOperationBuild extends Project {
             ex = e;
         }
 
-        var xunitViewer = new File("/usr/bin/xunit-viewer");
+        var xunitViewer = Path.of(System.getenv("NPM_PACKAGES"), "bin", "xunit-viewer").toFile();
         if (xunitViewer.exists() && xunitViewer.canExecute()) {
             var reportsDir = "build/reports/tests/test/";
 
