@@ -30,6 +30,8 @@
     <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="pmd" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="destFile" />
     <pattern value="rife.bld.extension.JacocoReportOperation" method="isNotBlank" />
+    <pattern value="rife.bld.extension.JacocoReportOperationBuild" />
+    <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="reporter" />
   </component>
   <component name="PDMPlugin">
     <option name="customRuleSets">
