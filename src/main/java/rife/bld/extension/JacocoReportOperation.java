@@ -52,19 +52,19 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * The location of the java class files.
      */
-    final private Collection<File> classFiles_ = new ArrayList<>();
+    private final Collection<File> classFiles_ = new ArrayList<>();
     /**
      * The location of the exec files.
      */
-    final private Collection<File> execFiles_ = new ArrayList<>();
+    private final Collection<File> execFiles_ = new ArrayList<>();
     /**
      * The location of the source files.
      */
-    final private Collection<File> sourceFiles_ = new ArrayList<>();
+    private final Collection<File> sourceFiles_ = new ArrayList<>();
     /**
      * The test tool options.
      */
-    final private Collection<String> testToolOptions_ = new ArrayList<>();
+    private final Collection<String> testToolOptions_ = new ArrayList<>();
     /**
      * The location of the CSV report.
      */

@@ -54,7 +54,7 @@ public class JacocoReportOperationBuild extends Project {
                         version(2, 3, 0)));
         scope(test)
                 .include(dependency("com.uwyn.rife2", "bld-extensions-testing-helpers",
-                        version(0, 9, 0, "SNAPSHOT")))
+                        version(0, 9, 3, "SNAPSHOT")))
                 .include(dependency("org.junit.jupiter", "junit-jupiter",
                         version(5, 13, 4)))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone",

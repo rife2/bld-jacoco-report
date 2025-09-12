@@ -17,12 +17,18 @@
 package rife.bld.extension;
 
 import org.assertj.core.api.AutoCloseableSoftAssertions;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import rife.bld.Project;
 import rife.bld.blueprints.BaseProjectBlueprint;
+import rife.bld.extension.testing.LoggingExtension;
 import rife.bld.extension.testing.TestLogHandler;
 import rife.bld.operations.exceptions.ExitStatusException;
 
@@ -38,27 +44,31 @@ import java.util.logging.Logger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.SignatureDeclareThrowsException", "PMD.TestClassWithoutTestCases"})
+@ExtendWith(LoggingExtension.class)
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
 class JacocoReportOperationTests {
     @SuppressWarnings("LoggerInitializedWithForeignClass")
-    private final Logger logger = Logger.getLogger(JacocoReportOperation.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     private File csvFile;
     private File htmlDir;
-    private TestLogHandler logHandler;
+    private static final TestLogHandler TEST_LOG_HANDLER = new TestLogHandler();
     @TempDir
     private File tempDir;
     private File xmlFile;
+
+    @RegisterExtension
+    @SuppressWarnings("unused")
+    private static final LoggingExtension LOGGING_EXTENSION = new LoggingExtension(
+            LOGGER,
+            TEST_LOG_HANDLER,
+            Level.ALL
+    );
 
     @BeforeEach
     void beforeEach() {
         csvFile = (new File(tempDir, "jacoco.csv"));
         htmlDir = (new File(tempDir, "html"));
         xmlFile = (new File(tempDir, "jacoco.xml"));
-
-        logHandler = new TestLogHandler();
-        logger.addHandler(logHandler);
-        logger.setLevel(Level.ALL);
-        logHandler.setLevel(Level.ALL);
     }
 
     @Test
@@ -78,7 +88,6 @@ class JacocoReportOperationTests {
 
         assertThat(args).isNotEmpty();
         assertThat(supported).containsAll(args);
-
     }
 
     @Test
@@ -119,13 +128,6 @@ class JacocoReportOperationTests {
         assertThat(op.testToolOptions()).containsExactly("-v", "--fail-fast");
     }
 
-    @AfterEach
-    void teardownLogging() {
-        if (logHandler != null) {
-            logger.removeHandler(logHandler);
-        }
-    }
-
     @Nested
     @DisplayName("Execute Tests")
     class ExecuteTests {
@@ -160,17 +162,17 @@ class JacocoReportOperationTests {
 
         @Test
         void executeFailureWhenProjectNotSetAndLoggingDisabled() {
-            logger.setLevel(Level.OFF);
+            TEST_LOG_HANDLER.setLevel(Level.OFF);
             var op = new JacocoReportOperation();
             assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeFailureWhenProjectNotSetAndSilent() {
             var op = new JacocoReportOperation().silent(true);
             assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -201,13 +203,13 @@ class JacocoReportOperationTests {
 
         @Test
         void executeWithEmptyExecFilesWithLoggingDisabled() {
-            logger.setLevel(Level.OFF);
+            TEST_LOG_HANDLER.setLevel(Level.OFF);
             var project = new BaseProjectBlueprint(new File("examples"), "com.example",
                     "examples", "Examples");
             var op = new JacocoReportOperation().fromProject(project);
             op.execFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -219,7 +221,7 @@ class JacocoReportOperationTests {
                     .fromProject(project);
             op.execFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -231,9 +233,9 @@ class JacocoReportOperationTests {
 
         @Test
         void executeWithLoggingDisabled() throws Exception {
-            logger.setLevel(Level.OFF);
+            TEST_LOG_HANDLER.setLevel(Level.OFF);
             newJacocoReportOperation().execute();
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -260,13 +262,13 @@ class JacocoReportOperationTests {
         @Test
         void executeWithQuiet() throws Exception {
             newJacocoReportOperation().quiet(true).execute();
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeWithSilent() throws Exception {
             newJacocoReportOperation().silent(true).execute();
-            assertThat(logHandler.getLogMessages()).isEmpty();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
         JacocoReportOperation newJacocoReportOperation() {
