@@ -60,7 +60,7 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone",
                         version(1, 13, 4)))
                 .include(dependency("org.assertj", "assertj-core",
-                        version(3, 27, 4)));
+                        version(3, 27, 5)));
 
         javadocOperation()
                 .javadocOptions()
