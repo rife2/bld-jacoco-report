@@ -47,6 +47,7 @@ public class JacocoReportOperationBuild extends Project {
         repositories = List.of(MAVEN_LOCAL, MAVEN_CENTRAL, RIFE2_RELEASES, RIFE2_SNAPSHOTS);
 
         var jacocoVersion = new VersionNumber(0, 8, 13);
+        var junit = version(6, 0, 0);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion)
                         .exclude("*", "org.jacoco.doc"))
@@ -55,10 +56,8 @@ public class JacocoReportOperationBuild extends Project {
         scope(test)
                 .include(dependency("com.uwyn.rife2", "bld-extensions-testing-helpers",
                         version(0, 9, 3)))
-                .include(dependency("org.junit.jupiter", "junit-jupiter",
-                        version(5, 13, 4)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone",
-                        version(1, 13, 4)))
+                .include(dependency("org.junit.jupiter", "junit-jupiter", junit))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", junit))
                 .include(dependency("org.assertj", "assertj-core",
                         version(3, 27, 6)));
 
