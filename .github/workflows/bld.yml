@@ -42,5 +42,5 @@ jobs:
         run: ./bld test
 
       - name: Run reporter
-        if: ${{ failure() && steps.tests.outcome == 'failure' }}
+        if: always() && steps.tests.outcome == 'failure'
         run: ./bld reporter --all
