@@ -16,6 +16,7 @@
 
 package rife.bld.extension;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jacoco.core.JaCoCo;
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
@@ -52,19 +53,19 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * The location of the java class files.
      */
-    private final Collection<File> classFiles_ = new ArrayList<>();
+    private final List<File> classFiles_ = new ArrayList<>();
     /**
      * The location of the exec files.
      */
-    private final Collection<File> execFiles_ = new ArrayList<>();
+    private final List<File> execFiles_ = new ArrayList<>();
     /**
      * The location of the source files.
      */
-    private final Collection<File> sourceFiles_ = new ArrayList<>();
+    private final List<File> sourceFiles_ = new ArrayList<>();
     /**
      * The test tool options.
      */
-    private final Collection<String> testToolOptions_ = new ArrayList<>();
+    private final List<String> testToolOptions_ = new ArrayList<>();
     /**
      * The location of the CSV report.
      */
@@ -98,16 +99,84 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     private File xml_;
 
-    private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
-        var builder = new CoverageBuilder();
-        var analyzer = new Analyzer(data, builder);
-        for (var f : classFiles_) {
-            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                LOGGER.info(f.getAbsolutePath());
+    /**
+     * Performs the operation execution that can be wrapped by the {@code #executeOnce} call.
+     */
+    @Override
+    @SuppressFBWarnings("STT_STRING_PARSING_A_FIELD")
+    public void execute() throws Exception {
+        if ((project_ == null)) {
+            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
+                LOGGER.severe("A project must be specified.");
             }
-            analyzer.analyzeAll(f);
+            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
-        return builder.getBundle(reportName_);
+
+        var buildJacocoReportsDir = Path.of(project_.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
+        var buildJacocoExecDir = Path.of(project_.buildDirectory().getPath(), "jacoco").toFile();
+        var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
+
+        if (destFile_ == null) {
+            destFile_ = buildJacocoExec;
+        }
+
+        if (execFiles_.isEmpty()) {
+            var testOperation = project_.testOperation().fromProject(project_);
+            testOperation.javaOptions().javaAgent(Path.of(project_.libBldDirectory().getPath(),
+                    "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
+                            + "-runtime.jar").toFile(), "destfile=" + destFile_.getPath());
+
+            if (!testToolOptions_.isEmpty()) {
+                testOperation.testToolOptions().addAll(testToolOptions_);
+            }
+
+            testOperation.execute();
+
+            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+                LOGGER.log(Level.INFO, "Execution Data: {0}", destFile_);
+            }
+
+            if (buildJacocoExec.exists()) {
+                execFiles_.add(buildJacocoExec);
+            }
+        }
+
+        if (sourceFiles_.isEmpty()) {
+            sourceFiles_.add(project_.srcMainJavaDirectory());
+        }
+
+        if (classFiles_.isEmpty()) {
+            classFiles_.add(project_.buildMainDirectory());
+        }
+
+        if (html_ == null) {
+            html_ = new File(buildJacocoReportsDir, "html");
+        }
+
+        if (xml_ == null) {
+            xml_ = new File(buildJacocoReportsDir, "jacocoTestReport.xml");
+        }
+
+        if (csv_ == null) {
+            csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
+        }
+
+        if (!buildJacocoReportsDir.mkdirs()) {
+            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
+                LOGGER.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
+            }
+            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
+        }
+        if (!buildJacocoExecDir.mkdirs()) {
+            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
+                LOGGER.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
+            }
+            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
+        }
+
+        var loader = loadExecFiles();
+        var bundle = analyze(loader.getExecutionDataStore());
+        writeReports(bundle, loader);
     }
 
     /**
@@ -148,7 +217,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the class files
      */
-    public Collection<File> classFiles() {
+    @SuppressFBWarnings("EI_EXPOSE_REP")
+    public List<File> classFiles() {
         return classFiles_;
     }
 
@@ -203,6 +273,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param csv the report location
      * @return this operation instance
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation csv(String csv) {
         return csv(new File(csv));
     }
@@ -243,6 +314,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param destFile the file
      * @return this operation instance
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation destFile(String destFile) {
         return destFile(new File(destFile));
     }
@@ -336,7 +408,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the exec files
      */
-    public Collection<File> execFiles() {
+    @SuppressFBWarnings("EI_EXPOSE_REP")
+    public List<File> execFiles() {
         return execFiles_;
     }
 
@@ -363,82 +436,12 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
-     * Performs the operation execution that can be wrapped by the {@code #executeOnce} call.
-     */
-    @Override
-    public void execute() throws Exception {
-        if ((project_ == null)) {
-            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
-                LOGGER.severe("A project must be specified.");
-            }
-            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
-        }
-
-        var buildJacocoReportsDir = Path.of(project_.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
-        var buildJacocoExecDir = Path.of(project_.buildDirectory().getPath(), "jacoco").toFile();
-        var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
-
-        if (destFile_ == null) {
-            destFile_ = buildJacocoExec;
-        }
-
-        if (execFiles_.isEmpty()) {
-            var testOperation = project_.testOperation().fromProject(project_);
-            testOperation.javaOptions().javaAgent(Path.of(project_.libBldDirectory().getPath(),
-                    "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
-                            + "-runtime.jar").toFile(), "destfile=" + destFile_.getPath());
-
-            if (!testToolOptions_.isEmpty()) {
-                testOperation.testToolOptions().addAll(testToolOptions_);
-            }
-
-            testOperation.execute();
-
-            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                LOGGER.log(Level.INFO, "Execution Data: {0}", destFile_);
-            }
-
-            if (buildJacocoExec.exists()) {
-                execFiles_.add(buildJacocoExec);
-            }
-        }
-
-        if (sourceFiles_.isEmpty()) {
-            sourceFiles_.add(project_.srcMainJavaDirectory());
-        }
-
-        if (classFiles_.isEmpty()) {
-            classFiles_.add(project_.buildMainDirectory());
-        }
-
-        if (html_ == null) {
-            html_ = new File(buildJacocoReportsDir, "html");
-        }
-
-        if (xml_ == null) {
-            xml_ = new File(buildJacocoReportsDir, "jacocoTestReport.xml");
-        }
-
-        if (csv_ == null) {
-            csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
-        }
-
-        //noinspection ResultOfMethodCallIgnored
-        buildJacocoReportsDir.mkdirs();
-        //noinspection ResultOfMethodCallIgnored
-        buildJacocoExecDir.mkdirs();
-
-        var loader = loadExecFiles();
-        var bundle = analyze(loader.getExecutionDataStore());
-        writeReports(bundle, loader);
-    }
-
-    /**
      * Configure the operation from a {@link BaseProject}.
      *
      * @param project the project
      * @return this operation instance
      */
+    @SuppressFBWarnings("EI_EXPOSE_REP2")
     public JacocoReportOperation fromProject(BaseProject project) {
         project_ = project;
         return this;
@@ -461,6 +464,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param html the HTML
      * @return this operation instance
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation html(String html) {
         return html(new File(html));
     }
@@ -493,22 +497,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return silent();
     }
 
-    private ExecFileLoader loadExecFiles() throws IOException {
-        var loader = new ExecFileLoader();
-        if (execFiles_.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !silent()) {
-            LOGGER.warning("No execution data files provided.");
-        } else {
-            for (var f : execFiles_) {
-                if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                    LOGGER.log(Level.INFO, "Loading execution data: {0}",
-                            f.getAbsolutePath());
-                }
-                loader.load(f);
-            }
-        }
-        return loader;
-    }
-
     /**
      * Sets the name used for the report.
      *
@@ -538,16 +526,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     public JacocoReportOperation quiet(boolean quiet) {
         silent(quiet);
         return this;
-    }
-
-    private IReportVisitor reportVisitor() throws IOException {
-        List<IReportVisitor> visitors = new ArrayList<>();
-
-        visitors.add(new XMLFormatter().createVisitor(Files.newOutputStream(xml_.toPath())));
-        visitors.add(new CSVFormatter().createVisitor(Files.newOutputStream(csv_.toPath())));
-        visitors.add(new HTMLFormatter().createVisitor(new FileMultiReportOutput(html_)));
-
-        return new MultiReportVisitor(visitors);
     }
 
     /**
@@ -600,7 +578,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the source files
      */
-    public Collection<File> sourceFiles() {
+    @SuppressFBWarnings("EI_EXPOSE_REP")
+    public List<File> sourceFiles() {
         return sourceFiles_;
     }
 
@@ -624,15 +603,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation sourceFilesStrings(Collection<String> sourceFiles) {
         return sourceFiles(sourceFiles.stream().map(File::new).toList());
-    }
-
-    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    private ISourceFileLocator sourceLocator() {
-        var multi = new MultiSourceFileLocator(tabWidth_);
-        for (var f : sourceFiles_) {
-            multi.add(new DirectorySourceFileLocator(f, encoding_, tabWidth_));
-        }
-        return multi;
     }
 
     /**
@@ -660,7 +630,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the test tool options
      */
-    public Collection<String> testToolOptions() {
+    @SuppressFBWarnings("EI_EXPOSE_REP")
+    public List<String> testToolOptions() {
         return testToolOptions_;
     }
 
@@ -687,24 +658,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return this;
     }
 
-    private void writeReports(IBundleCoverage bundle, ExecFileLoader loader)
-            throws IOException {
-        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-            LOGGER.log(Level.INFO, "Analyzing {0} classes.",
-                    bundle.getClassCounter().getTotalCount());
-        }
-        var visitor = reportVisitor();
-        visitor.visitInfo(loader.getSessionInfoStore().getInfos(),
-                loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(bundle, sourceLocator());
-        visitor.visitEnd();
-        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml_.toURI().getPath());
-            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv_.toURI().getPath());
-            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", html_.toURI().getPath());
-        }
-    }
-
     /**
      * Sets the location of the XML report.
      *
@@ -722,6 +675,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param xml the report location
      * @return this operation instance
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation xml(String xml) {
         return xml(new File(xml));
     }
@@ -743,5 +697,70 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public File xml() {
         return xml_;
+    }
+
+    private IBundleCoverage analyze(ExecutionDataStore data) throws IOException {
+        var builder = new CoverageBuilder();
+        var analyzer = new Analyzer(data, builder);
+        for (var f : classFiles_) {
+            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+                LOGGER.info(f.getAbsolutePath());
+            }
+            analyzer.analyzeAll(f);
+        }
+        return builder.getBundle(reportName_);
+    }
+
+    private ExecFileLoader loadExecFiles() throws IOException {
+        var loader = new ExecFileLoader();
+        if (execFiles_.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !silent()) {
+            LOGGER.warning("No execution data files provided.");
+        } else {
+            for (var f : execFiles_) {
+                if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+                    LOGGER.log(Level.INFO, "Loading execution data: {0}",
+                            f.getAbsolutePath());
+                }
+                loader.load(f);
+            }
+        }
+        return loader;
+    }
+
+    private IReportVisitor reportVisitor() throws IOException {
+        List<IReportVisitor> visitors = new ArrayList<>();
+
+        visitors.add(new XMLFormatter().createVisitor(Files.newOutputStream(xml_.toPath())));
+        visitors.add(new CSVFormatter().createVisitor(Files.newOutputStream(csv_.toPath())));
+        visitors.add(new HTMLFormatter().createVisitor(new FileMultiReportOutput(html_)));
+
+        return new MultiReportVisitor(visitors);
+    }
+
+    @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+    private ISourceFileLocator sourceLocator() {
+        var multi = new MultiSourceFileLocator(tabWidth_);
+        for (var f : sourceFiles_) {
+            multi.add(new DirectorySourceFileLocator(f, encoding_, tabWidth_));
+        }
+        return multi;
+    }
+
+    private void writeReports(IBundleCoverage bundle, ExecFileLoader loader)
+            throws IOException {
+        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+            LOGGER.log(Level.INFO, "Analyzing {0} classes.",
+                    bundle.getClassCounter().getTotalCount());
+        }
+        var visitor = reportVisitor();
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(),
+                loader.getExecutionDataStore().getContents());
+        visitor.visitBundle(bundle, sourceLocator());
+        visitor.visitEnd();
+        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
+            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml_.toURI().getPath());
+            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv_.toURI().getPath());
+            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", html_.toURI().getPath());
+        }
     }
 }

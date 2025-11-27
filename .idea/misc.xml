@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
     <entry_points version="2.0">
@@ -31,6 +32,7 @@
     <pattern value="rife.bld.extension.JacocoReportOperation" method="isNotBlank" />
     <pattern value="rife.bld.extension.JacocoReportOperationBuild" />
     <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="reporter" />
+    <pattern value="rife.bld.extension.JacocoReportOperationBuild" method="spotbugs" />
   </component>
   <component name="PDMPlugin">
     <option name="customRuleSets">
