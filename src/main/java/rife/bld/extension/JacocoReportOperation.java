@@ -161,13 +161,13 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
         }
 
-        if (!buildJacocoReportsDir.mkdirs()) {
+        if (!buildJacocoReportsDir.exists() && !buildJacocoReportsDir.mkdirs()) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
             }
             throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
-        if (!buildJacocoExecDir.mkdirs()) {
+        if (!buildJacocoExecDir.exists() && !buildJacocoExecDir.mkdirs()) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
             }
