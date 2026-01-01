@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 the original author or authors.
+ * Copyright 2023-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,13 +49,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 class JacocoReportOperationTests {
     @SuppressWarnings("LoggerInitializedWithForeignClass")
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
-    private File csvFile;
-    private File htmlDir;
     private static final TestLogHandler TEST_LOG_HANDLER = new TestLogHandler();
-    @TempDir
-    private File tempDir;
-    private File xmlFile;
-
     @RegisterExtension
     @SuppressWarnings("unused")
     private static final LoggingExtension LOGGING_EXTENSION = new LoggingExtension(
@@ -63,6 +57,11 @@ class JacocoReportOperationTests {
             TEST_LOG_HANDLER,
             Level.ALL
     );
+    private File csvFile;
+    private File htmlDir;
+    @TempDir
+    private File tempDir;
+    private File xmlFile;
 
     @BeforeEach
     void beforeEach() {

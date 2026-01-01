@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 the original author or authors.
+ * Copyright 2023-2026 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,6 +94,21 @@ public class JacocoReportOperationBuild extends Project {
                 .signPassphrase(property("sign.passphrase"));
     }
 
+    @Override
+    public void test() throws Exception {
+        if (ExecOperation.isLinux()) {
+            new ExecOperation()
+                    .fromProject(this)
+                    .command("scripts/cliargs.sh")
+                    .execute();
+        }
+
+        var testResultsDir = "build/test-results/test/";
+        var op = testOperation().fromProject(this);
+        op.testToolOptions().reportsDir(new File(testResultsDir));
+        op.execute();
+    }
+
     public static void main(String[] args) {
         new JacocoReportOperationBuild().start(args);
     }
@@ -113,21 +128,6 @@ public class JacocoReportOperationBuild extends Project {
                 .fromProject(this)
                 .failOnSummary(true)
                 .execute();
-    }
-
-    @Override
-    public void test() throws Exception {
-        if (ExecOperation.isLinux()) {
-            new ExecOperation()
-                    .fromProject(this)
-                    .command("scripts/cliargs.sh")
-                    .execute();
-        }
-
-        var testResultsDir = "build/test-results/test/";
-        var op = testOperation().fromProject(this);
-        op.testToolOptions().reportsDir(new File(testResultsDir));
-        op.execute();
     }
 
     @BuildCommand(summary = "Runs SpotBugs on this project")
