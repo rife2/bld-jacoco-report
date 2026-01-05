@@ -28,7 +28,7 @@ import org.jacoco.report.csv.CSVFormatter;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
-import rife.bld.extension.tools.FilesUtils;
+import rife.bld.extension.tools.IOUtils;
 import rife.bld.operations.AbstractOperation;
 import rife.bld.operations.exceptions.ExitStatusException;
 
@@ -162,13 +162,13 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
         }
 
-        if (!FilesUtils.mkdirs(buildJacocoReportsDir)) {
+        if (!IOUtils.mkdirs(buildJacocoReportsDir)) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
             }
             throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
-        if (!FilesUtils.mkdirs(buildJacocoExecDir)) {
+        if (!IOUtils.mkdirs(buildJacocoExecDir)) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
             }
