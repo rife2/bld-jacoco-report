@@ -47,6 +47,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 @ExtendWith(LoggingExtension.class)
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
 class JacocoReportOperationTests {
+
     @SuppressWarnings("LoggerInitializedWithForeignClass")
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     private static final TestLogHandler TEST_LOG_HANDLER = new TestLogHandler();
@@ -130,6 +131,7 @@ class JacocoReportOperationTests {
     @Nested
     @DisplayName("Execute Tests")
     class ExecuteTests {
+
         @Test
         void execute() throws Exception {
             newJacocoReportOperation().execute();
@@ -285,6 +287,7 @@ class JacocoReportOperationTests {
     @Nested
     @DisplayName("File Operation Tests")
     class FilesOperationTests {
+
         private final File barFile = new File("bar");
         private final File fooFile = new File("foo");
         private final JacocoReportOperation op = new JacocoReportOperation();
@@ -292,6 +295,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Class Files Tests")
         class ClassFilesTests {
+
             @Test
             void classFilesAsFileArray() {
                 op.classFiles().clear();
@@ -344,6 +348,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Dest File Tests")
         class DestFileTests {
+
             @Test
             void destFileAsFile() {
                 op.destFile(fooFile);
@@ -367,6 +372,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Exec Files Tests")
         class ExecFilesTests {
+
             private final File barFile = new File("bar");
             private final File fooFile = new File("foo");
             private final JacocoReportOperation op = new JacocoReportOperation();
@@ -424,6 +430,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Source Files Tests")
         class SourceFilesTests {
+
             private final File barFile = new File("bar");
             private final File fooFile = new File("foo");
             private final JacocoReportOperation op = new JacocoReportOperation();
@@ -481,6 +488,7 @@ class JacocoReportOperationTests {
     @Nested
     @DisplayName("Options Tests")
     class OptionsTests {
+
         public static final String FOO = "foo";
         private final File fooFile = new File(FOO);
 
@@ -508,6 +516,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("CSV Tests")
         class CsvTests {
+
             @Test
             void csvAsFile() {
                 var op = new JacocoReportOperation();
@@ -534,6 +543,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("HTML Tests")
         class HtmlTests {
+
             @Test
             void htmlAsFile() {
                 var op = new JacocoReportOperation();
@@ -560,6 +570,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Quiet Tests")
         class QuietTests {
+
             @Test
             void quietIsFalse() {
                 var op = new JacocoReportOperation();
@@ -578,6 +589,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("Test Tool Options Tests")
         class TestToolOptionsTests {
+
             public static final String BAR = "bar";
 
             @Test
@@ -598,6 +610,7 @@ class JacocoReportOperationTests {
         @Nested
         @DisplayName("XML Tests")
         class XmlTests {
+
             @Test
             void xmlAsFile() {
                 var op = new JacocoReportOperation();

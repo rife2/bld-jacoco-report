@@ -28,7 +28,8 @@ import org.jacoco.report.csv.CSVFormatter;
 import org.jacoco.report.html.HTMLFormatter;
 import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
-import rife.bld.extension.tools.IOUtils;
+import rife.bld.extension.tools.IOTools;
+import rife.bld.extension.tools.ObjectTools;
 import rife.bld.operations.AbstractOperation;
 import rife.bld.operations.exceptions.ExitStatusException;
 
@@ -50,6 +51,7 @@ import java.util.logging.Logger;
  * @since 1.0
  */
 public class JacocoReportOperation extends AbstractOperation<JacocoReportOperation> {
+
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
     /**
      * The location of the java class files.
@@ -162,13 +164,13 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
             csv_ = new File(buildJacocoReportsDir, "jacocoTestReport.csv");
         }
 
-        if (!IOUtils.mkdirs(buildJacocoReportsDir)) {
+        if (!IOTools.mkdirs(buildJacocoReportsDir)) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
             }
             throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
-        if (!IOUtils.mkdirs(buildJacocoExecDir)) {
+        if (!IOTools.mkdirs(buildJacocoExecDir)) {
             if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
                 LOGGER.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
             }
@@ -188,7 +190,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFiles(Collection)
      */
     public JacocoReportOperation classFiles(File... classFiles) {
-        return classFiles(List.of(classFiles));
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            return classFiles(List.of(classFiles));
+        }
+        return this;
     }
 
     /**
@@ -199,7 +204,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFilesStrings(Collection)
      */
     public JacocoReportOperation classFiles(String... classFiles) {
-        return classFilesStrings(List.of(classFiles));
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            return classFilesStrings(List.of(classFiles));
+        }
+        return this;
     }
 
     /**
@@ -210,7 +218,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFilesPaths(Collection)
      */
     public JacocoReportOperation classFiles(Path... classFiles) {
-        return classFilesPaths(List.of(classFiles));
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            return classFilesPaths(List.of(classFiles));
+        }
+        return this;
     }
 
     /**
@@ -231,7 +242,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFiles(File...)
      */
     public JacocoReportOperation classFiles(Collection<File> classFiles) {
-        classFiles_.addAll(classFiles);
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            classFiles_.addAll(classFiles);
+        }
         return this;
     }
 
@@ -243,7 +256,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFiles(Path...)
      */
     public JacocoReportOperation classFilesPaths(Collection<Path> classFiles) {
-        return classFiles(classFiles.stream().map(Path::toFile).toList());
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            return classFiles(classFiles.stream().map(Path::toFile).toList());
+        }
+        return this;
     }
 
     /**
@@ -254,7 +270,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #classFiles(String...)
      */
     public JacocoReportOperation classFilesStrings(Collection<String> classFiles) {
-        return classFiles(classFiles.stream().map(File::new).toList());
+        if (ObjectTools.isNotEmpty(classFiles)) {
+            return classFiles(classFiles.stream().map(File::new).toList());
+        }
+        return this;
     }
 
     /**
@@ -367,7 +386,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFiles(Collection)
      */
     public JacocoReportOperation execFiles(File... execFiles) {
-        return execFiles(List.of(execFiles));
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            return execFiles(List.of(execFiles));
+        }
+        return this;
     }
 
     /**
@@ -378,7 +400,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFilesStrings(Collection)
      */
     public JacocoReportOperation execFiles(String... execFiles) {
-        return execFilesStrings(List.of(execFiles));
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            return execFilesStrings(List.of(execFiles));
+        }
+        return this;
     }
 
     /**
@@ -389,7 +414,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFilesPaths(Collection)
      */
     public JacocoReportOperation execFiles(Path... execFiles) {
-        return execFilesPaths(List.of(execFiles));
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            return execFilesPaths(List.of(execFiles));
+        }
+        return this;
     }
 
     /**
@@ -400,7 +428,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFiles(File...)
      */
     public JacocoReportOperation execFiles(Collection<File> execFiles) {
-        execFiles_.addAll(execFiles);
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            execFiles_.addAll(execFiles);
+        }
         return this;
     }
 
@@ -422,7 +452,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFiles(Path...)
      */
     public JacocoReportOperation execFilesPaths(Collection<Path> execFiles) {
-        return execFiles(execFiles.stream().map(Path::toFile).toList());
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            return execFiles(execFiles.stream().map(Path::toFile).toList());
+        }
+        return this;
     }
 
     /**
@@ -433,7 +466,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #execFiles(String...)
      */
     public JacocoReportOperation execFilesStrings(Collection<String> execFiles) {
-        return execFiles(execFiles.stream().map(File::new).toList());
+        if (ObjectTools.isNotEmpty(execFiles)) {
+            return execFiles(execFiles.stream().map(File::new).toList());
+        }
+        return this;
     }
 
     /**
@@ -537,7 +573,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFiles(Collection)
      */
     public JacocoReportOperation sourceFiles(File... sourceFiles) {
-        return sourceFiles(List.of(sourceFiles));
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            return sourceFiles(List.of(sourceFiles));
+        }
+        return this;
     }
 
     /**
@@ -548,7 +587,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFilesStrings(Collection)
      */
     public JacocoReportOperation sourceFiles(String... sourceFiles) {
-        return sourceFilesStrings(List.of(sourceFiles));
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            return sourceFilesStrings(List.of(sourceFiles));
+        }
+        return this;
     }
 
     /**
@@ -559,7 +601,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFilesPaths(Collection)
      */
     public JacocoReportOperation sourceFiles(Path... sourceFiles) {
-        return sourceFilesPaths(List.of(sourceFiles));
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            return sourceFilesPaths(List.of(sourceFiles));
+        }
+        return this;
     }
 
     /**
@@ -570,7 +615,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFiles(File...)
      */
     public JacocoReportOperation sourceFiles(Collection<File> sourceFiles) {
-        sourceFiles_.addAll(sourceFiles);
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            sourceFiles_.addAll(sourceFiles);
+        }
         return this;
     }
 
@@ -592,7 +639,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFiles(Path...)
      */
     public JacocoReportOperation sourceFilesPaths(Collection<Path> sourceFiles) {
-        return sourceFiles(sourceFiles.stream().map(Path::toFile).toList());
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            return sourceFiles(sourceFiles.stream().map(Path::toFile).toList());
+        }
+        return this;
     }
 
     /**
@@ -603,7 +653,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #sourceFiles(String...)
      */
     public JacocoReportOperation sourceFilesStrings(Collection<String> sourceFiles) {
-        return sourceFiles(sourceFiles.stream().map(File::new).toList());
+        if (ObjectTools.isNotEmpty(sourceFiles)) {
+            return sourceFiles(sourceFiles.stream().map(File::new).toList());
+        }
+        return this;
     }
 
     /**
@@ -644,7 +697,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #testToolOptions(Collection)
      */
     public JacocoReportOperation testToolOptions(String... options) {
-        return testToolOptions(List.of(options));
+        if (ObjectTools.isNotEmpty(options)) {
+            return testToolOptions(List.of(options));
+        }
+        return this;
     }
 
     /**
@@ -655,7 +711,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @see #testToolOptions(String...)
      */
     public JacocoReportOperation testToolOptions(Collection<String> options) {
-        testToolOptions_.addAll(options);
+        if (ObjectTools.isNotEmpty(options)) {
+            testToolOptions_.addAll(options);
+        }
         return this;
     }
 
