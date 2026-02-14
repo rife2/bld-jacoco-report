@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 @ExtendWith(LoggingExtension.class)
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
-class JacocoReportOperationTests {
+class JacocoReportOperationTest {
 
     @SuppressWarnings("LoggerInitializedWithForeignClass")
     private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
@@ -272,6 +272,17 @@ class JacocoReportOperationTests {
             assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
         }
 
+        @Test
+        void executeWithTestOperation() throws Exception {
+            newJacocoReportOperation().testOperation(new Project().testOperation()).execute();
+            try (var softly = new AutoCloseableSoftAssertions()) {
+                try (var lines = Files.lines(xmlFile.toPath())) {
+                    softly.assertThat(lines.anyMatch(s ->
+                            s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
+                }
+            }
+        }
+
         JacocoReportOperation newJacocoReportOperation() {
             return new JacocoReportOperation()
                     .fromProject(new Project())
@@ -489,7 +500,7 @@ class JacocoReportOperationTests {
     @DisplayName("Options Tests")
     class OptionsTests {
 
-        public static final String FOO = "foo";
+        static final String FOO = "foo";
         private final File fooFile = new File(FOO);
 
         @Test
@@ -590,7 +601,7 @@ class JacocoReportOperationTests {
         @DisplayName("Test Tool Options Tests")
         class TestToolOptionsTests {
 
-            public static final String BAR = "bar";
+            static final String BAR = "bar";
 
             @Test
             void testToolOptionsAsArray() {

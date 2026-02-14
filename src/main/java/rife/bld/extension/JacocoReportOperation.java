@@ -31,6 +31,7 @@ import rife.bld.BaseProject;
 import rife.bld.extension.tools.IOTools;
 import rife.bld.extension.tools.ObjectTools;
 import rife.bld.operations.AbstractOperation;
+import rife.bld.operations.TestOperation;
 import rife.bld.operations.exceptions.ExitStatusException;
 
 import java.io.File;
@@ -98,6 +99,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     private int tabWidth_ = 4;
     /**
+     * The test operation
+     */
+    private TestOperation<?, ?> testOperation_;
+    /**
      * THe location of the XML report
      */
     private File xml_;
@@ -124,16 +129,18 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         }
 
         if (execFiles_.isEmpty()) {
-            var testOperation = project_.testOperation().fromProject(project_);
-            testOperation.javaOptions().javaAgent(Path.of(project_.libBldDirectory().getPath(),
+            if (testOperation_ == null) {
+                testOperation_ = project_.testOperation().fromProject(project_);
+            }
+            testOperation_.javaOptions().javaAgent(Path.of(project_.libBldDirectory().getPath(),
                     "org.jacoco.agent-" + JaCoCo.VERSION.substring(0, JaCoCo.VERSION.lastIndexOf('.'))
                             + "-runtime.jar").toFile(), "destfile=" + destFile_.getPath());
 
             if (!testToolOptions_.isEmpty()) {
-                testOperation.testToolOptions().addAll(testToolOptions_);
+                testOperation_.testToolOptions().addAll(testToolOptions_);
             }
 
-            testOperation.execute();
+            testOperation_.execute();
 
             if (LOGGER.isLoggable(Level.INFO) && !silent()) {
                 LOGGER.log(Level.INFO, "Execution Data: {0}", destFile_);
@@ -677,6 +684,17 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public int tabWidth() {
         return tabWidth_;
+    }
+
+    /**
+     * Sets the test operation.
+     *
+     * @param testOperation the test operation.
+     * @return this operation instance
+     */
+    public JacocoReportOperation testOperation(TestOperation<?, ?> testOperation) {
+        testOperation_ = testOperation;
+        return this;
     }
 
     /**
