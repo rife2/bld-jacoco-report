@@ -23,9 +23,10 @@ public class ExamplesBuild extends Project {
 
         repositories = List.of(MAVEN_LOCAL, MAVEN_CENTRAL);
 
+        var junit = version(6, 0, 3);
         scope(test)
-                .include(dependency("org.junit.jupiter", "junit-jupiter", version(6, 0, 2)))
-                .include(dependency("org.junit.platform", "junit-platform-console-standalone", version(6, 0, 2)));
+                .include(dependency("org.junit.jupiter", "junit-jupiter", junit))
+                .include(dependency("org.junit.platform", "junit-platform-console-standalone", junit));
     }
 
     public static void main(String[] args) {
