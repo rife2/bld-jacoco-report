@@ -35,7 +35,7 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(0, 9, 13, "SNAPSHOT");
+        version = version(0, 9, 13);
 
         javaRelease = 17;
 
