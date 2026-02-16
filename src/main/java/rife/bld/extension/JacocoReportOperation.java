@@ -689,7 +689,7 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     /**
      * Sets the test operation.
      *
-     * @param testOperation the test operation.
+     * @param testOperation the test operation
      * @return this operation instance
      */
     public JacocoReportOperation testOperation(TestOperation<?, ?> testOperation) {
