@@ -21,7 +21,7 @@ public class ExamplesBuild extends Project {
         downloadSources = true;
         autoDownloadPurge = true;
 
-        repositories = List.of(MAVEN_LOCAL, MAVEN_CENTRAL);
+        repositories = List.of(MAVEN_CENTRAL);
 
         var junit = version(6, 0, 3);
         scope(test)
