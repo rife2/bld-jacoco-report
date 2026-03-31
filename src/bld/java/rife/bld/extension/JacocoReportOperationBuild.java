@@ -25,6 +25,9 @@ import rife.bld.publish.PublishLicense;
 import rife.bld.publish.PublishScm;
 
 import java.util.List;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static rife.bld.dependencies.Repository.*;
 import static rife.bld.dependencies.Scope.*;
@@ -42,7 +45,7 @@ public class JacocoReportOperationBuild extends Project {
         downloadSources = true;
         autoDownloadPurge = true;
 
-        repositories = List.of(MAVEN_CENTRAL, CENTRAL_SNAPSHOTS, RIFE2_RELEASES);
+        repositories = List.of(MAVEN_CENTRAL, CENTRAL_SNAPSHOTS, RIFE2_RELEASES, RIFE2_SNAPSHOTS);
 
         var jacocoVersion = new VersionNumber(0, 8, 14);
         var junit = version(6, 0, 3);
@@ -50,7 +53,7 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion)
                         .exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld-extensions-tools",
-                        version(0, 9, 0)))
+                        version(1, 0, 1)))
                 .include(dependency("com.uwyn.rife2", "bld",
                         version(2, 3, 1, "SNAPSHOT")));
         scope(provided)
@@ -58,7 +61,7 @@ public class JacocoReportOperationBuild extends Project {
                         version(4, 9, 8)));
         scope(test)
                 .include(dependency("com.uwyn.rife2", "bld-extensions-testing-helpers",
-                        version(0, 9, 6)))
+                        version(1, 0, 0)))
                 .include(dependency("org.junit.jupiter", "junit-jupiter", junit))
                 .include(dependency("org.junit.platform", "junit-platform-console-standalone", junit))
                 .include(dependency("org.assertj", "assertj-core",
@@ -112,6 +115,15 @@ public class JacocoReportOperationBuild extends Project {
     }
 
     public static void main(String[] args) {
+        var level = Level.FINE;
+        var logger = Logger.getLogger("rife.bld.extension");
+        var consoleHandler = new ConsoleHandler();
+
+        consoleHandler.setLevel(level);
+        logger.addHandler(consoleHandler);
+        logger.setLevel(level);
+        logger.setUseParentHandlers(false);
+
         new JacocoReportOperationBuild().start(args);
     }
 

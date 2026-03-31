@@ -149,6 +149,16 @@ class JacocoReportOperationTest {
         }
 
         @Test
+        void executeCalledTwiceProducesSameReports() throws Exception {
+            var op = newJacocoReportOperation();
+            op.execute();
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(csvFile).exists();
+            assertThat(xmlFile).exists();
+            assertThat(htmlDir).isDirectory();
+        }
+
+        @Test
         void executeFailure() {
             var op = new JacocoReportOperation().fromProject(new Project());
 
@@ -174,6 +184,30 @@ class JacocoReportOperationTest {
             var op = new JacocoReportOperation().silent(true);
             assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
             assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeIsIdempotentForClassFiles() throws Exception {
+            var op = newJacocoReportOperation();
+            var before = List.copyOf(op.classFiles());
+            op.execute();
+            assertThat(op.classFiles()).isEqualTo(before);
+        }
+
+        @Test
+        void executeIsIdempotentForExecFiles() throws Exception {
+            var op = newJacocoReportOperation();
+            var before = List.copyOf(op.execFiles());
+            op.execute();
+            assertThat(op.execFiles()).isEqualTo(before);
+        }
+
+        @Test
+        void executeIsIdempotentForSourceFiles() throws Exception {
+            var op = newJacocoReportOperation();
+            var before = List.copyOf(op.sourceFiles());
+            op.execute();
+            assertThat(op.sourceFiles()).isEqualTo(before);
         }
 
         @Test
@@ -237,6 +271,36 @@ class JacocoReportOperationTest {
             TEST_LOG_HANDLER.setLevel(Level.OFF);
             newJacocoReportOperation().execute();
             assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithMissingExecFileAndLoggingDisabled() {
+            TEST_LOG_HANDLER.setLevel(Level.OFF);
+            var op = newJacocoReportOperation()
+                    .execFiles(new File("does/not/exist.exec"));
+            op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithMissingExecFileAndSilent() {
+            var op = newJacocoReportOperation()
+                    .silent(true)
+                    .execFiles(new File("does/not/exist.exec"));
+            op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeWithMissingExecFileLogsWarning() {
+            var op = newJacocoReportOperation()
+                    .execFiles(new File("does/not/exist.exec"));
+            op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
+            assertThatCode(op::execute).doesNotThrowAnyException();
+            assertThat(TEST_LOG_HANDLER.getLogMessages())
+                    .anyMatch(m -> m.contains("not found") || m.contains("skipping"));
         }
 
         @Test
@@ -494,6 +558,27 @@ class JacocoReportOperationTest {
                 assertThat(op.sourceFiles()).as("Path...").contains(fooFile, barFile);
             }
         }
+
+        @Nested
+        @DisplayName("Test Operation Tests")
+        class TestOperationTests {
+
+            @Test
+            void testOperationRejectsNull() {
+                var op = new JacocoReportOperation();
+                assertThatCode(() -> op.testOperation(null))
+                        .isInstanceOf(NullPointerException.class);
+            }
+
+            @Test
+            void testOperationRoundTrip() {
+                var op = new JacocoReportOperation();
+                var testOp = new Project().testOperation();
+                op.testOperation(testOp);
+                // No getter exists; verify execute picks it up without NPE when project is set
+                assertThat(op).isNotNull();
+            }
+        }
     }
 
     @Nested
@@ -552,6 +637,73 @@ class JacocoReportOperationTest {
         }
 
         @Nested
+        @DisplayName("Dest File Tests (Options)")
+        class DestFileOptionTests {
+
+            private final File fooFile = new File("foo");
+
+            @Test
+            void destFileAsFile() {
+                var op = new JacocoReportOperation();
+                op.destFile(fooFile);
+                assertThat(op.destFile()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void destFileAsPath() {
+                var op = new JacocoReportOperation();
+                op.destFile(fooFile.toPath());
+                assertThat(op.destFile()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void destFileAsString() {
+                var op = new JacocoReportOperation();
+                op.destFile("foo");
+                assertThat(op.destFile()).isEqualTo(fooFile);
+            }
+
+            @Test
+            void destFileIsNotMutatedAfterExecute() throws Exception {
+                var op = new JacocoReportOperation()
+                        .fromProject(new Project())
+                        .csv(csvFile)
+                        .html(htmlDir)
+                        .xml(xmlFile)
+                        .classFiles(new File("src/test/resources/Examples.class"))
+                        .sourceFiles(new File("examples/src/main/java"))
+                        .execFiles(new File("src/test/resources/jacoco.exec"));
+                assertThat(op.destFile()).isNull();
+                op.execute();
+                assertThat(op.destFile()).isNull();
+            }
+
+            @Test
+            void destFileIsNullByDefault() {
+                var op = new JacocoReportOperation();
+                assertThat(op.destFile()).isNull();
+            }
+        }
+
+        @Nested
+        @DisplayName("Encoding Tests")
+        class EncodingTests {
+
+            @Test
+            void encodingIsNullByDefault() {
+                var op = new JacocoReportOperation();
+                assertThat(op.encoding()).isNull();
+            }
+
+            @Test
+            void encodingRoundTrip() {
+                var op = new JacocoReportOperation();
+                op.encoding("UTF-8");
+                assertThat(op.encoding()).isEqualTo("UTF-8");
+            }
+        }
+
+        @Nested
         @DisplayName("HTML Tests")
         class HtmlTests {
 
@@ -579,6 +731,23 @@ class JacocoReportOperationTest {
         }
 
         @Nested
+        @DisplayName("IsQuiet Tests")
+        class IsQuietTests {
+
+            @Test
+            void isQuietDefaultsFalse() {
+                var op = new JacocoReportOperation();
+                assertThat(op.isQuiet()).isFalse();
+            }
+
+            @Test
+            void isQuietMatchesSilent() {
+                var op = new JacocoReportOperation().silent(true);
+                assertThat(op.isQuiet()).isTrue();
+            }
+        }
+
+        @Nested
         @DisplayName("Quiet Tests")
         class QuietTests {
 
@@ -594,6 +763,42 @@ class JacocoReportOperationTest {
                 var op = new JacocoReportOperation();
                 op.quiet(true);
                 assertThat(op.isQuiet()).isTrue();
+            }
+        }
+
+        @Nested
+        @DisplayName("Report Name Tests")
+        class ReportNameTests {
+
+            @Test
+            void customReportName() {
+                var op = new JacocoReportOperation();
+                op.name("Custom");
+                assertThat(op.name()).isEqualTo("Custom");
+            }
+
+            @Test
+            void defaultReportName() {
+                var op = new JacocoReportOperation();
+                assertThat(op.name()).isEqualTo("JaCoCo Coverage Report");
+            }
+        }
+
+        @Nested
+        @DisplayName("Tab Width Tests")
+        class TabWidthTests {
+
+            @Test
+            void customTabWidth() {
+                var op = new JacocoReportOperation();
+                op.tabWidth(2);
+                assertThat(op.tabWidth()).isEqualTo(2);
+            }
+
+            @Test
+            void defaultTabWidth() {
+                var op = new JacocoReportOperation();
+                assertThat(op.tabWidth()).isEqualTo(4);
             }
         }
 

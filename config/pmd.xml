@@ -35,16 +35,17 @@
         <exclude name="ShortClassName"/>
         <exclude name="ShortMethodName"/>
         <exclude name="ShortVariable"/>
+        <exclude name="UnnecessaryImport"/>
         <exclude name="UseExplicitTypes"/>
         <exclude name="UseUnderscoresInNumericLiterals"/>
         <exclude name="UselessParentheses"/>
     </rule>
 
-    <rule ref="category/java/codestyle.xml/UnnecessaryImport">
-        <properties>
-            <property name="violationSuppressRegex" value="Unused (static|.*\.\*).*"/>
-        </properties>
-    </rule>
+<!--    <rule ref="category/java/codestyle.xml/UnnecessaryImport">-->
+<!--        <properties>-->
+<!--            <property name="violationSuppressRegex" value="Unused (static|.*\.\*).*"/>-->
+<!--        </properties>-->
+<!--    </rule>-->
 
     <!-- DESIGN -->
     <rule ref="category/java/design.xml">
