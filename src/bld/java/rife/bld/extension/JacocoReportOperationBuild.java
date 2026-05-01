@@ -38,7 +38,7 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(0, 9, 14, "SNAPSHOT");
+        version = version(1, 0, 0, "SNAPSHOT");
 
         javaRelease = 17;
 
@@ -53,7 +53,7 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion)
                         .exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld-extensions-tools",
-                        version(1, 0, 1)))
+                        version(1, 2, 0)))
                 .include(dependency("com.uwyn.rife2", "bld",
                         version(2, 3, 1, "SNAPSHOT")));
         scope(provided)
