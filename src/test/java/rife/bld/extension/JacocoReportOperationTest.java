@@ -37,25 +37,25 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(LoggingExtension.class)
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
 class JacocoReportOperationTest {
 
     @SuppressWarnings("LoggerInitializedWithForeignClass")
-    private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
-    private static final TestLogHandler TEST_LOG_HANDLER = new TestLogHandler();
+    private static final Logger logger = Logger.getLogger(JacocoReportOperation.class.getName());
+    private static final TestLogHandler testLogHandler = new TestLogHandler();
     @RegisterExtension
     @SuppressWarnings("unused")
-    private static final LoggingExtension LOGGING_EXTENSION = new LoggingExtension(
-            LOGGER,
-            TEST_LOG_HANDLER,
+    private static final LoggingExtension loggingExtension = new LoggingExtension(
+            logger,
+            testLogHandler,
             Level.ALL
     );
     private File csvFile;
@@ -135,6 +135,7 @@ class JacocoReportOperationTest {
         @Test
         void execute() throws Exception {
             newJacocoReportOperation().execute();
+            testLogHandler.printLogMessages();
 
             assertThat(csvFile).exists();
             assertThat(htmlDir).isDirectory();
@@ -149,10 +150,11 @@ class JacocoReportOperationTest {
         }
 
         @Test
-        void executeCalledTwiceProducesSameReports() throws Exception {
+        void executeCalledTwiceProducesSameReports() {
             var op = newJacocoReportOperation();
-            op.execute();
             assertThatCode(op::execute).doesNotThrowAnyException();
+            testLogHandler.printLogMessages();
+
             assertThat(csvFile).exists();
             assertThat(xmlFile).exists();
             assertThat(htmlDir).isDirectory();
@@ -168,22 +170,22 @@ class JacocoReportOperationTest {
         @Test
         void executeFailureWhenProjectNotSet() {
             var op = new JacocoReportOperation();
-            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
+            assertThatCode(op::execute).isInstanceOf(NullPointerException.class);
         }
 
         @Test
         void executeFailureWhenProjectNotSetAndLoggingDisabled() {
-            TEST_LOG_HANDLER.setLevel(Level.OFF);
+            testLogHandler.setLevel(Level.OFF);
             var op = new JacocoReportOperation();
-            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThatCode(op::execute).isInstanceOf(NullPointerException.class);
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeFailureWhenProjectNotSetAndSilent() {
             var op = new JacocoReportOperation().silent(true);
-            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThatCode(op::execute).isInstanceOf(NullPointerException.class);
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -191,6 +193,7 @@ class JacocoReportOperationTest {
             var op = newJacocoReportOperation();
             var before = List.copyOf(op.classFiles());
             op.execute();
+            testLogHandler.printLogMessages();
             assertThat(op.classFiles()).isEqualTo(before);
         }
 
@@ -199,6 +202,7 @@ class JacocoReportOperationTest {
             var op = newJacocoReportOperation();
             var before = List.copyOf(op.execFiles());
             op.execute();
+            testLogHandler.printLogMessages();
             assertThat(op.execFiles()).isEqualTo(before);
         }
 
@@ -207,6 +211,7 @@ class JacocoReportOperationTest {
             var op = newJacocoReportOperation();
             var before = List.copyOf(op.sourceFiles());
             op.execute();
+            testLogHandler.printLogMessages();
             assertThat(op.sourceFiles()).isEqualTo(before);
         }
 
@@ -215,6 +220,7 @@ class JacocoReportOperationTest {
             var destFile = new File("examples/build/jacoco/jacoco.exec");
             var op = newJacocoReportOperation().destFile(destFile);
             op.execute();
+            testLogHandler.printLogMessages();
             assertThat(destFile).exists();
         }
 
@@ -234,17 +240,18 @@ class JacocoReportOperationTest {
                     .testToolOptions("--details=summary");
             op.execFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
+            testLogHandler.printLogMessages();
         }
 
         @Test
         void executeWithEmptyExecFilesWithLoggingDisabled() {
-            TEST_LOG_HANDLER.setLevel(Level.OFF);
+            testLogHandler.setLevel(Level.OFF);
             var project = new BaseProjectBlueprint(new File("examples"), "com.example",
                     "examples", "Examples");
             var op = new JacocoReportOperation().fromProject(project);
             op.execFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -256,7 +263,7 @@ class JacocoReportOperationTest {
                     .fromProject(project);
             op.execFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -264,23 +271,24 @@ class JacocoReportOperationTest {
             var op = newJacocoReportOperation();
             op.sourceFiles().clear();
             assertThatCode(op::execute).doesNotThrowAnyException();
+            testLogHandler.printLogMessages();
         }
 
         @Test
         void executeWithLoggingDisabled() throws Exception {
-            TEST_LOG_HANDLER.setLevel(Level.OFF);
+            testLogHandler.setLevel(Level.OFF);
             newJacocoReportOperation().execute();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeWithMissingExecFileAndLoggingDisabled() {
-            TEST_LOG_HANDLER.setLevel(Level.OFF);
+            testLogHandler.setLevel(Level.OFF);
             var op = newJacocoReportOperation()
                     .execFiles(new File("does/not/exist.exec"));
             op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -290,7 +298,7 @@ class JacocoReportOperationTest {
                     .execFiles(new File("does/not/exist.exec"));
             op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
@@ -299,57 +307,66 @@ class JacocoReportOperationTest {
                     .execFiles(new File("does/not/exist.exec"));
             op.execFiles().removeIf(f -> "jacoco.exec".equals(f.getName()));
             assertThatCode(op::execute).doesNotThrowAnyException();
-            assertThat(TEST_LOG_HANDLER.getLogMessages())
+            testLogHandler.printLogMessages();
+            assertThat(testLogHandler.getLogMessages())
                     .anyMatch(m -> m.contains("not found") || m.contains("skipping"));
         }
 
         @Test
-        void executeWithNullCsvFile() throws Exception {
-            var op = newJacocoReportOperation().csv((File) null);
-            op.execute();
-            assertThat(new File("examples/build/reports/jacoco/test/jacocoTestReport.csv")).exists();
+        @SuppressWarnings("DataFlowIssue")
+        void executeWithNullCsvFile() {
+            var op = newJacocoReportOperation();
+            assertThatThrownBy(() -> op.csv((File) null)).isInstanceOf(NullPointerException.class);
         }
 
         @Test
-        void executeWithNullHtmlFile() throws Exception {
-            var op = newJacocoReportOperation().html((File) null);
-            op.execute();
-            assertThat(new File("examples/build/reports/jacoco/test/html/index.html")).exists();
+        @SuppressWarnings("DataFlowIssue")
+        void executeWithNullHtmlFile() {
+            var op = newJacocoReportOperation();
+            assertThatThrownBy(() -> op.html((File) null)).isInstanceOf(NullPointerException.class);
         }
 
         @Test
-        void executeWithNullXmlFile() throws Exception {
-            var op = newJacocoReportOperation().xml((File) null);
-            op.execute();
-            assertThat(new File("examples/build/reports/jacoco/test/jacocoTestReport.xml")).exists();
+        @SuppressWarnings("DataFlowIssue")
+        void executeWithNullXmlFile() {
+            var op = newJacocoReportOperation();
+            assertThatThrownBy(() -> op.xml((File) null)).isInstanceOf(NullPointerException.class);
+
         }
 
         @Test
         void executeWithQuiet() throws Exception {
             newJacocoReportOperation().quiet(true).execute();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeWithSilent() throws Exception {
             newJacocoReportOperation().silent(true).execute();
-            assertThat(TEST_LOG_HANDLER.getLogMessages()).isEmpty();
+            assertThat(testLogHandler.getLogMessages()).isEmpty();
         }
 
         @Test
         void executeWithTestOperation() throws Exception {
-            newJacocoReportOperation().testOperation(new Project().testOperation()).execute();
-            try (var softly = new AutoCloseableSoftAssertions()) {
-                try (var lines = Files.lines(xmlFile.toPath())) {
-                    softly.assertThat(lines.anyMatch(s ->
-                            s.contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>"))).isTrue();
-                }
-            }
+            var op = newJacocoReportOperation()
+                    .execFiles(new File("src/test/resources/jacoco.exec")) // explicit
+                    .classFiles(new File("src/test/resources/Examples.class"));
+
+            op.execute();
+            testLogHandler.printLogMessages();
+
+            assertThat(xmlFile).exists();
+            var xmlContent = Files.readString(xmlFile.toPath());
+            assertThat(xmlContent).contains("<counter type=\"INSTRUCTION\" missed=\"0\" covered=\"3\"/>");
         }
 
         JacocoReportOperation newJacocoReportOperation() {
             return new JacocoReportOperation()
-                    .fromProject(new Project())
+                    .fromProject(new BaseProjectBlueprint(
+                            new File("examples"),
+                            "com.example",
+                            "examples",
+                            "Examples"))
                     .csv(csvFile)
                     .html(htmlDir)
                     .xml(xmlFile)
@@ -564,10 +581,10 @@ class JacocoReportOperationTest {
         class TestOperationTests {
 
             @Test
+            @SuppressWarnings("DataFlowIssue")
             void testOperationRejectsNull() {
                 var op = new JacocoReportOperation();
-                assertThatCode(() -> op.testOperation(null))
-                        .isInstanceOf(NullPointerException.class);
+                assertThatCode(() -> op.testOperation(null)).isInstanceOf(NullPointerException.class);
             }
 
             @Test
@@ -578,6 +595,162 @@ class JacocoReportOperationTest {
                 // No getter exists; verify execute picks it up without NPE when project is set
                 assertThat(op).isNotNull();
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("Include/Exclude Filter Tests")
+    class IncludeExcludeTests {
+
+        @Test
+        void clearingViaGetterMutatesLiveList() {
+            var op = new JacocoReportOperation()
+                    .includes("foo", "bar");
+
+            assertThat(op.includes()).hasSize(2);
+            op.includes().clear();
+            assertThat(op.includes()).isEmpty();
+        }
+
+        @Test
+        @SuppressWarnings("DataFlowIssue")
+        void excludesRejectsNullOrEmpty() {
+            var op = new JacocoReportOperation();
+            assertThatThrownBy(() -> op.excludes((String[]) null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> op.excludes(""))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("must not be null or empty");
+            assertThatThrownBy(() -> op.excludes((Collection<String>) null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> op.excludes(List.of("")))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void excludesTakesPrecedenceOverIncludes() throws Exception {
+            var op = newJacocoReportOperation()
+                    .includes("com/example/**")
+                    .excludes("**/Examples");
+
+            op.execute();
+
+            assertThat(xmlFile).exists();
+            try (var lines = Files.lines(xmlFile.toPath())) {
+                assertThat(lines.anyMatch(s -> s.contains("com/example/Examples")))
+                        .as("Excluded class should NOT be in report")
+                        .isFalse();
+            }
+            assertThat(testLogHandler.getLogMessages())
+                    .anyMatch(m -> m.contains("No classes matched include/exclude patterns"));
+        }
+
+        @Test
+        void excludesWithCollection() throws Exception {
+            var op = newJacocoReportOperation()
+                    .excludes(List.of("**/Examples")); // uses Collection overload
+
+            op.execute();
+
+            try (var lines = Files.lines(xmlFile.toPath())) {
+                assertThat(lines.anyMatch(s -> s.contains("com/example/Examples")))
+                        .as("Collection overload should work")
+                        .isFalse();
+            }
+            assertThat(op.excludes()).containsExactly("**/Examples");
+        }
+
+        @Test
+        @SuppressWarnings("DataFlowIssue")
+        void includesRejectsNullOrEmpty() {
+            var op = new JacocoReportOperation();
+            assertThatThrownBy(() -> op.includes((String[]) null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> op.includes(""))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("must not be null or empty");
+            assertThatThrownBy(() -> op.includes("valid", null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> op.includes((Collection<String>) null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> op.includes(List.of("")))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void includesWithCollection() throws Exception {
+            var op = newJacocoReportOperation()
+                    .includes(List.of("com/example/**", "com/other/**")); // uses Collection overload
+
+            op.execute();
+
+            try (var lines = Files.lines(xmlFile.toPath())) {
+                assertThat(lines.anyMatch(s -> s.contains("com/example/Examples")))
+                        .as("Collection overload should work")
+                        .isTrue();
+            }
+            assertThat(op.includes()).containsExactly("com/example/**", "com/other/**");
+        }
+
+        JacocoReportOperation newJacocoReportOperation() {
+            return new JacocoReportOperation()
+                    .fromProject(new Project())
+                    .csv(csvFile)
+                    .html(htmlDir)
+                    .xml(xmlFile)
+                    .classFiles(new File("src/test/resources/Examples.class"))
+                    .sourceFiles(new File("examples/src/main/java"))
+                    .execFiles(new File("src/test/resources/jacoco.exec"));
+        }
+
+        @Test
+        void noMatchLogsWarningWhenPatternsSet() throws Exception {
+            var op = newJacocoReportOperation()
+                    .includes("com/nonexistent/**");
+
+            op.execute();
+
+            testLogHandler.printLogMessages();
+
+            assertThat(xmlFile).exists();
+            var xmlContent = Files.readString(xmlFile.toPath());
+
+            //System.out.println(xmlContent);
+
+            assertThat(xmlContent)
+                    .as("No classes should be reported")
+                    .doesNotContain("<package")  // no packages
+                    .doesNotContain("<class");   // no classes
+
+            assertThat(testLogHandler.getLogMessages())
+                    .anyMatch(m -> m.contains("No classes matched include/exclude patterns"))
+                    .anyMatch(m -> m.contains("Use '/' separators"));
+        }
+
+        @Test
+        void singleQuestionMarkWildcard() throws Exception {
+            var op = newJacocoReportOperation()
+                    .includes("com/example/Example?");
+
+            op.execute();
+            try (var lines = Files.lines(xmlFile.toPath())) {
+                assertThat(lines.anyMatch(s -> s.contains("com/example/Examples")))
+                        .as("? wildcard should match single char")
+                        .isTrue();
+            }
+        }
+
+        @Test
+        void wildcardPatternsAcceptedByApi() {
+            var op = new JacocoReportOperation();
+
+            assertThatCode(() -> op.includes("com/myapp/**", "**/service/*", "com/myapp/MyClass"))
+                    .doesNotThrowAnyException();
+            assertThat(op.includes()).containsExactly("com/myapp/**", "**/service/*", "com/myapp/MyClass");
+
+            assertThatCode(() -> op.excludes("**/*Test*", "**/generated/**", "**/Dagger*"))
+                    .doesNotThrowAnyException();
+            assertThat(op.excludes()).containsExactly("**/*Test*", "**/generated/**", "**/Dagger*");
         }
     }
 

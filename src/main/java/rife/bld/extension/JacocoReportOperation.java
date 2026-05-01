@@ -16,11 +16,13 @@
 
 package rife.bld.extension;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.jacoco.core.JaCoCo;
 import org.jacoco.core.analysis.Analyzer;
 import org.jacoco.core.analysis.CoverageBuilder;
 import org.jacoco.core.analysis.IBundleCoverage;
+import org.jacoco.core.analysis.IClassCoverage;
 import org.jacoco.core.data.ExecutionDataStore;
 import org.jacoco.core.tools.ExecFileLoader;
 import org.jacoco.report.*;
@@ -30,12 +32,14 @@ import org.jacoco.report.xml.XMLFormatter;
 import rife.bld.BaseProject;
 import rife.bld.extension.tools.CollectionTools;
 import rife.bld.extension.tools.IOTools;
+import rife.bld.extension.tools.ObjectTools;
 import rife.bld.operations.AbstractOperation;
 import rife.bld.operations.TestOperation;
 import rife.bld.operations.exceptions.ExitStatusException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -44,25 +48,54 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * Generates <a href="https://www.jacoco.org/jacoco">JaCoCo</a> reports.
+ * <p>
+ * Execution modes:
+ * <ul>
+ *   <li><b>Run tests + generate reports:</b> Default. Uses {@link #fromProject(BaseProject)}
+ *       or {@link #testOperation(TestOperation)} to run tests with the JaCoCo agent, then
+ *       generates reports from the resulting execution data.</li>
+ *   <li><b>Reports from existing execution data:</b> Call {@link #execFiles(File...)} with
+ *       pre-generated {@code *.exec} files. Tests are not executed.</li>
+ *   <li><b>Merge + run tests:</b> Call both {@link #execFiles(File...)} and
+ *       {@link #testOperation(TestOperation)}. New execution data is generated and merged
+ *       with the provided files before reporting.</li>
+ * </ul>
  *
  * @author <a href="https://erik.thauvin.net/">Erik C. Thauvin</a>
  * @since 1.0
  */
+
+@SuppressWarnings("PMD.ExcessiveImports")
+@SuppressFBWarnings(value = "EI_EXPOSE_REP", justification = "intentional and documented")
 public class JacocoReportOperation extends AbstractOperation<JacocoReportOperation> {
 
-    private static final Logger LOGGER = Logger.getLogger(JacocoReportOperation.class.getName());
-
+    public static final String CLASS_FILE_INVALID = "Class files values must not be null";
+    public static final String EXEC_FILES_NOT_VALID = "Exec files values must not be null";
+    public static final String SOURCE_FILE_NOT_VALID = "Source files values must not be null";
+    /**
+     * The instance logger.
+     */
+    private static final Logger logger = Logger.getLogger(JacocoReportOperation.class.getName());
     /**
      * The location of the java class files.
      */
     private final List<File> classFiles_ = new ArrayList<>();
     /**
+     * Class name exclude patterns.
+     */
+    private final List<String> excludes_ = new ArrayList<>();
+    /**
      * The location of the exec files.
      */
     private final List<File> execFiles_ = new ArrayList<>();
+    /**
+     * Class name include patterns, e.g. {@code com/myapp/**}
+     */
+    private final List<String> includes_ = new ArrayList<>();
     /**
      * The location of the source files.
      */
@@ -112,17 +145,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * Performs the operation execution that can be wrapped by the {@code #executeOnce} call.
      */
     @Override
-    @SuppressFBWarnings("STT_STRING_PARSING_A_FIELD")
     public void execute() throws Exception {
-        if (project_ == null) {
-            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
-                LOGGER.severe("A project must be specified.");
-            }
-            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
-        }
+        Objects.requireNonNull(project_, "A project must be specified");
 
-        var buildJacocoReportsDir =
-                Path.of(project_.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
+        var buildJacocoReportsDir = Path.of(project_.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
         var buildJacocoExecDir = Path.of(project_.buildDirectory().getPath(), "jacoco").toFile();
         var buildJacocoExec = Path.of(buildJacocoExecDir.getPath(), "jacoco.exec").toFile();
 
@@ -132,22 +158,22 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         // Resolve exec files locally to avoid mutating execFiles_ as a side effect
         List<File> effectiveExecFiles = new ArrayList<>(execFiles_);
 
-        if (effectiveExecFiles.isEmpty()) {
-            var testOp = (testOperation_ != null)
-                    ? testOperation_
-                    : project_.testOperation().fromProject(project_);
+        // Run tests unless execFiles() was explicitly called AND no testOperation was set
+        boolean shouldRunTests = testOperation_ != null || execFiles_.isEmpty();
 
-            var jacocoVersion = JaCoCo.VERSION;
-            var lastDot = jacocoVersion.lastIndexOf('.');
-            if (lastDot <= 0) {
-                throw new IllegalStateException("Unexpected JaCoCo version format: " + jacocoVersion);
+        if (shouldRunTests) {
+            var testOp = (testOperation_ != null) ? testOperation_ : project_.testOperation().fromProject(project_);
+
+            var javaAgent = Path.of(project_.libBldDirectory().getPath(), "org.jacoco.agent-" + getJacocoAgentVersion() + "-runtime.jar").toFile();
+
+            if (!javaAgent.exists()) {
+                if (logger.isLoggable(Level.SEVERE) && !silent()) {
+                    logger.severe("JaCoCo agent does not exist: " + javaAgent);
+                }
+                throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
             }
-            var shortVersion = jacocoVersion.substring(0, lastDot);
 
-            testOp.javaOptions().javaAgent(
-                    Path.of(project_.libBldDirectory().getPath(),
-                            "org.jacoco.agent-" + shortVersion + "-runtime.jar").toFile(),
-                    "destfile=" + effectiveDestFile.getPath());
+            testOp.javaOptions().javaAgent(javaAgent, "destfile=" + effectiveDestFile.getPath());
 
             if (!testToolOptions_.isEmpty()) {
                 testOp.testToolOptions().addAll(testToolOptions_);
@@ -155,52 +181,59 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
             testOp.execute();
 
-            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                LOGGER.log(Level.INFO, "Execution Data: {0}", effectiveDestFile);
+            if (logger.isLoggable(Level.INFO) && !silent()) {
+                logger.log(Level.INFO, "Execution Data: " + effectiveDestFile);
             }
 
-            if (buildJacocoExec.exists()) {
-                effectiveExecFiles.add(buildJacocoExec);
+            // Merge the fresh exec with any pre-existing ones
+            if (effectiveDestFile.exists() && !effectiveExecFiles.contains(effectiveDestFile)) {
+                effectiveExecFiles.add(effectiveDestFile);
             }
         }
 
         // Resolve source files locally
-        var effectiveSourceFiles = sourceFiles_.isEmpty()
-                ? List.of(project_.srcMainJavaDirectory())
-                : List.copyOf(sourceFiles_);
+        var effectiveSourceFiles = sourceFiles_.isEmpty() ? List.of(project_.srcMainJavaDirectory()) : List.copyOf(sourceFiles_);
 
         // Resolve class files locally
-        var effectiveClassFiles = classFiles_.isEmpty()
-                ? List.of(project_.buildMainDirectory())
-                : List.copyOf(classFiles_);
+        var effectiveClassFiles = classFiles_.isEmpty() ? List.of(project_.buildMainDirectory()) : List.copyOf(classFiles_);
 
-        var effectiveHtmlDir = (htmlDirectory_ != null)
-                ? htmlDirectory_
-                : new File(buildJacocoReportsDir, "html");
+        var effectiveHtmlDir = (htmlDirectory_ != null) ? htmlDirectory_ : new File(buildJacocoReportsDir, "html");
 
-        var effectiveXml = (xml_ != null)
-                ? xml_
-                : new File(buildJacocoReportsDir, "jacocoTestReport.xml");
+        var effectiveXml = (xml_ != null) ? xml_ : new File(buildJacocoReportsDir, "jacocoTestReport.xml");
 
-        var effectiveCsv = (csv_ != null)
-                ? csv_
-                : new File(buildJacocoReportsDir, "jacocoTestReport.csv");
+        var effectiveCsv = (csv_ != null) ? csv_ : new File(buildJacocoReportsDir, "jacocoTestReport.csv");
 
         if (!IOTools.mkdirs(buildJacocoReportsDir)) {
-            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
-                LOGGER.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
+            if (logger.isLoggable(Level.SEVERE) && !silent()) {
+                logger.severe("Could not create reports directory: " + buildJacocoReportsDir.getAbsolutePath());
             }
             throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
         if (!IOTools.mkdirs(buildJacocoExecDir)) {
-            if (LOGGER.isLoggable(Level.SEVERE) && !silent()) {
-                LOGGER.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
+            if (logger.isLoggable(Level.SEVERE) && !silent()) {
+                logger.severe("Could not create directory: " + buildJacocoExecDir.getAbsolutePath());
             }
             throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
         }
 
         var loader = loadExecFiles(effectiveExecFiles);
+
+        // Warn if no execution data was actually loaded
+        if (loader.getExecutionDataStore().getContents().isEmpty() && logger.isLoggable(Level.WARNING) && !silent()) {
+            logger.warning("Report will be empty. No coverage data found from exec files: " + effectiveExecFiles);
+        }
+
         var bundle = analyze(loader.getExecutionDataStore(), effectiveClassFiles);
+
+        long classCount = bundle.getClassCounter().getTotalCount();
+
+        if (logger.isLoggable(Level.INFO) && !silent()) {
+            logger.log(Level.INFO, "Analyzing " + classCount + " classes");
+        }
+        if (classCount == 0 && logger.isLoggable(Level.WARNING) && !silent()) {
+            logger.warning("No classes matched include/exclude patterns or no class files found.");
+        }
+
         writeReports(bundle, loader, effectiveXml, effectiveCsv, effectiveHtmlDir, effectiveSourceFiles);
     }
 
@@ -209,10 +242,12 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
-     * @see #classFiles(Collection...)
+     * @see #classFiles(Collection)
      */
-    public JacocoReportOperation classFiles(File... classFiles) {
-        classFiles_.addAll(CollectionTools.combine(classFiles));
+    public JacocoReportOperation classFiles(@NonNull File... classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
+        classFiles_.clear();
+        classFiles_.addAll(List.of(classFiles));
         return this;
     }
 
@@ -221,9 +256,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
-     * @see #classFilesStrings(Collection...)
+     * @see #classFilesStrings(Collection)
      */
-    public JacocoReportOperation classFiles(String... classFiles) {
+    public JacocoReportOperation classFiles(@NonNull String... classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, "Class files values must not be null or empty");
+        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combineStringsToFiles(classFiles));
         return this;
     }
@@ -233,9 +270,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param classFiles the class files
      * @return this operation instance
-     * @see #classFilesPaths(Collection...)
+     * @see #classFilesPaths(Collection)
      */
-    public JacocoReportOperation classFiles(Path... classFiles) {
+    public JacocoReportOperation classFiles(@NonNull Path... classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
+        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combinePathsToFiles(classFiles));
         return this;
     }
@@ -248,7 +287,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the class files
      */
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public List<File> classFiles() {
         return classFiles_;
     }
@@ -260,9 +298,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #classFiles(File...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation classFiles(Collection<File>... classFiles) {
-        classFiles_.addAll(CollectionTools.combine(classFiles));
+    public final JacocoReportOperation classFiles(@NonNull Collection<File> classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
+        classFiles_.clear();
+        classFiles_.addAll(classFiles);
         return this;
     }
 
@@ -273,8 +312,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #classFiles(Path...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation classFilesPaths(Collection<Path>... classFiles) {
+    public final JacocoReportOperation classFilesPaths(@NonNull Collection<Path> classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
+        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combinePathsToFiles(classFiles));
         return this;
     }
@@ -286,8 +326,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #classFiles(String...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation classFilesStrings(Collection<String>... classFiles) {
+    public final JacocoReportOperation classFilesStrings(@NonNull Collection<String> classFiles) {
+        ObjectTools.requireAllNotEmpty(classFiles, "Class files values must not be null or empty");
+        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combineStringsToFiles(classFiles));
         return this;
     }
@@ -298,8 +339,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param csv the report location
      * @return this operation instance
      */
-    public JacocoReportOperation csv(File csv) {
-        csv_ = csv;
+    public JacocoReportOperation csv(@NonNull File csv) {
+        csv_ = Objects.requireNonNull(csv, "The csv file must not be null");
+
         return this;
     }
 
@@ -310,7 +352,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
-    public JacocoReportOperation csv(String csv) {
+    public JacocoReportOperation csv(@NonNull String csv) {
+        ObjectTools.requireNotEmpty(csv, "The csv file must not be null or empty");
         return csv(new File(csv));
     }
 
@@ -320,7 +363,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param csv the report location
      * @return this operation instance
      */
-    public JacocoReportOperation csv(Path csv) {
+    public JacocoReportOperation csv(@NonNull Path csv) {
+        Objects.requireNonNull(csv, "The csv file must not be null");
         return csv(csv.toFile());
     }
 
@@ -339,8 +383,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param destFile the file
      * @return this operation instance
      */
-    public JacocoReportOperation destFile(File destFile) {
-        destFile_ = destFile;
+    public JacocoReportOperation destFile(@NonNull File destFile) {
+        destFile_ = Objects.requireNonNull(destFile, "Destination file must not be null");
         return this;
     }
 
@@ -351,7 +395,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
-    public JacocoReportOperation destFile(String destFile) {
+    public JacocoReportOperation destFile(@NonNull String destFile) {
+        ObjectTools.requireNotEmpty(destFile, "Destination file must not be null or empty");
         return destFile(new File(destFile));
     }
 
@@ -361,7 +406,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param destFile the file
      * @return this operation instance
      */
-    public JacocoReportOperation destFile(Path destFile) {
+    public JacocoReportOperation destFile(@NonNull Path destFile) {
+        Objects.requireNonNull(destFile, "The dest file must not be null");
         return destFile(destFile.toFile());
     }
 
@@ -380,8 +426,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param encoding the encoding
      * @return this operation instance
      */
-    public JacocoReportOperation encoding(String encoding) {
-        encoding_ = encoding;
+    public JacocoReportOperation encoding(@NonNull String encoding) {
+        encoding_ = Objects.requireNonNull(encoding, "The encoding must not be null");
         return this;
     }
 
@@ -395,51 +441,164 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     /**
-     * Sets the locations of the JaCoCo *.exec files to read.
+     * Sets class name patterns to exclude from the coverage analysis.
+     * <p>
+     * Uses Ant-style path patterns matched against JVM internal class names with '/' separators.
+     * Exclude patterns take precedence over include patterns.
+     * <p>
+     * Pattern syntax:
+     * <ul>
+     *   <li>{@code *} matches zero or more characters except '/'</li>
+     *   <li>{@code **} matches zero or more directories</li>
+     *   <li>{@code ?} matches a single character</li>
+     * </ul>
+     * <p>
+     * Common examples:
+     * <ul>
+     *   <li>{@code "&ast;&ast;/&ast;Test&ast;"} - exclude all test classes</li>
+     *   <li>{@code "&ast;&ast;/generated/&ast;&ast;"} - exclude generated code</li>
+     *   <li>{@code "&ast;&ast;/proto/&ast;&ast;"} - exclude protobuf classes</li>
+     *   <li>{@code "&ast;&ast;/Dagger&ast;"} - exclude Dagger generated classes</li>
+     * </ul>
      *
-     * @param execFiles the exec files
+     * @param patterns the Ant-style exclude patterns; must not be null or contain null/empty elements
      * @return this operation instance
-     * @see #execFiles(Collection...)
+     * @throws NullPointerException     if patterns is null or contains null
+     * @throws IllegalArgumentException if patterns contains empty strings
+     * @see #includes(String...)
      */
-    public JacocoReportOperation execFiles(File... execFiles) {
-        execFiles_.addAll(CollectionTools.combine(execFiles));
+    public JacocoReportOperation excludes(@NonNull String... patterns) {
+        ObjectTools.requireAllNotEmpty(patterns, "Exclude patterns must not be null or empty");
+        excludes_.clear();
+        excludes_.addAll(List.of(patterns));
+        return this;
+    }
+
+    /**
+     * Returns the class name patterns to exclude from coverage analysis.
+     * <p>
+     * The returned list is the live internal list and is mutable by design
+     * to support the fluent builder pattern.
+     *
+     * @return the exclude patterns, empty if no classes are excluded
+     * @see #excludes(String...)
+     */
+    public List<String> excludes() {
+        return excludes_;
+    }
+
+    /**
+     * Sets class name patterns to exclude from the coverage analysis.
+     * <p>
+     * Uses Ant-style path patterns matched against JVM internal class names with '/' separators.
+     * Exclude patterns take precedence over include patterns.
+     * <p>
+     * Pattern syntax:
+     * <ul>
+     *   <li>{@code *} matches zero or more characters except '/'</li>
+     *   <li>{@code **} matches zero or more directories</li>
+     *   <li>{@code ?} matches a single character</li>
+     * </ul>
+     * <p>
+     * Common examples:
+     * <ul>
+     *   <li>{@code "&ast;&ast;/&ast;Test&ast;"} - exclude all test classes</li>
+     *   <li>{@code "&ast;&ast;/generated/&ast;&ast;"} - exclude generated code</li>
+     *   <li>{@code "&ast;&ast;/proto/&ast;&ast;"} - exclude protobuf classes</li>
+     *   <li>{@code "&ast;&ast;/Dagger&ast;"} - exclude Dagger generated classes</li>
+     * </ul>
+     *
+     * @param patterns the Ant-style exclude patterns; must not be null, empty, or contain null/empty elements
+     * @return this operation instance
+     * @throws NullPointerException     if patterns is null or contains null
+     * @throws IllegalArgumentException if patterns is empty or contains empty strings
+     * @see #excludes(String...)
+     * @see #includes(Collection)
+     */
+    public final JacocoReportOperation excludes(@NonNull Collection<String> patterns) {
+        ObjectTools.requireAllNotEmpty(patterns, "Exclude patterns must not be null or empty");
+        excludes_.clear();
+        excludes_.addAll(patterns);
         return this;
     }
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
      *
      * @param execFiles the exec files
      * @return this operation instance
-     * @see #execFilesStrings(Collection...)
+     * @see #execFiles(Collection)
      */
-    public JacocoReportOperation execFiles(String... execFiles) {
+    public JacocoReportOperation execFiles(@NonNull File... execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
+        execFiles_.clear();
+        execFiles_.addAll(List.of(execFiles));
+        return this;
+    }
+
+    /**
+     * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
+     *
+     * @param execFiles the exec files
+     * @return this operation instance
+     * @see #execFilesStrings(Collection)
+     */
+    public JacocoReportOperation execFiles(@NonNull String... execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, "Exec files values must not be null or empty");
+        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combineStringsToFiles(execFiles));
         return this;
     }
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
      *
      * @param execFiles the exec files
      * @return this operation instance
-     * @see #execFilesPaths(Collection...)
+     * @see #execFilesPaths(Collection)
      */
-    public JacocoReportOperation execFiles(Path... execFiles) {
+    public JacocoReportOperation execFiles(@NonNull Path... execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
+        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combinePathsToFiles(execFiles));
         return this;
     }
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
      *
      * @param execFiles the exec files
      * @return this operation instance
      * @see #execFiles(File...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation execFiles(Collection<File>... execFiles) {
-        execFiles_.addAll(CollectionTools.combine(execFiles));
+    public final JacocoReportOperation execFiles(@NonNull Collection<File> execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
+        execFiles_.clear();
+        execFiles_.addAll(execFiles);
         return this;
     }
 
@@ -451,33 +610,46 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the exec files
      */
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public List<File> execFiles() {
         return execFiles_;
     }
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
      *
      * @param execFiles the exec files
      * @return this operation instance
      * @see #execFiles(Path...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation execFilesPaths(Collection<Path>... execFiles) {
+    public final JacocoReportOperation execFilesPaths(@NonNull Collection<Path> execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
+        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combinePathsToFiles(execFiles));
         return this;
     }
 
     /**
      * Sets the locations of the JaCoCo *.exec files to read.
+     * <p>
+     * If exec files are provided and {@link #testOperation(TestOperation)} is not called,
+     * tests will not be executed. Reports are generated from the provided files only.
+     * <p>
+     * If both exec files and a test operation are provided, tests run and the new
+     * execution data is merged with the provided files.
      *
      * @param execFiles the exec files
      * @return this operation instance
      * @see #execFiles(String...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation execFilesStrings(Collection<String>... execFiles) {
+    public final JacocoReportOperation execFilesStrings(@NonNull Collection<String> execFiles) {
+        ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
+        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combineStringsToFiles(execFiles));
         return this;
     }
@@ -499,8 +671,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param html the HTML report directory
      * @return this operation instance
      */
-    public JacocoReportOperation html(File html) {
-        htmlDirectory_ = html;
+    public JacocoReportOperation html(@NonNull File html) {
+        htmlDirectory_ = Objects.requireNonNull(html, "The html file must not be null");
         return this;
     }
 
@@ -511,7 +683,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
-    public JacocoReportOperation html(String html) {
+    public JacocoReportOperation html(@NonNull String html) {
+        ObjectTools.requireNotEmpty(html, "The html file must not be null or empty");
         return html(new File(html));
     }
 
@@ -521,7 +694,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param html the HTML report directory
      * @return this operation instance
      */
-    public JacocoReportOperation html(Path html) {
+    public JacocoReportOperation html(@NonNull Path html) {
+        Objects.requireNonNull(html, "The html file must not be null");
         return html(html.toFile());
     }
 
@@ -532,6 +706,86 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public File html() {
         return htmlDirectory_;
+    }
+
+    /**
+     * Sets class name patterns to include in the coverage analysis.
+     * <p>
+     * Uses Ant-style path patterns matched against JVM internal class names with '/' separators.
+     * If no includes are specified, all classes are included by default unless excluded.
+     * <p>
+     * Pattern syntax:
+     * <ul>
+     *   <li>{@code *} matches zero or more characters except '/'</li>
+     *   <li>{@code **} matches zero or more directories</li>
+     *   <li>{@code ?} matches a single character</li>
+     * </ul>
+     * <p>
+     * Examples:
+     * <ul>
+     *   <li>{@code "com/myapp/&ast;&ast;"} - all classes in com.myapp and subpackages</li>
+     *   <li>{@code "&ast;&ast;/service/&ast;"} - all classes directly in any service package</li>
+     *   <li>{@code "com/myapp/MyClass"} - single class com.myapp.MyClass</li>
+     * </ul>
+     *
+     * @param patterns the Ant-style include patterns; must not be null or contain null/empty elements
+     * @return this operation instance
+     * @throws NullPointerException     if patterns is null or contains null
+     * @throws IllegalArgumentException if patterns contains empty strings
+     * @see #excludes(String...)
+     */
+    public JacocoReportOperation includes(@NonNull String... patterns) {
+        ObjectTools.requireAllNotEmpty(patterns, "Include patterns must not be null or empty");
+        includes_.clear();
+        includes_.addAll(List.of(patterns));
+        return this;
+    }
+
+    /**
+     * Returns the class name patterns to include in coverage analysis.
+     * <p>
+     * The returned list is the live internal list and is mutable by design
+     * to support the fluent builder pattern.
+     *
+     * @return the include patterns, empty if all classes are included
+     * @see #includes(String...)
+     */
+    public List<String> includes() {
+        return includes_;
+    }
+
+    /**
+     * Sets class name patterns to include in the coverage analysis.
+     * <p>
+     * Uses Ant-style path patterns matched against JVM internal class names with '/' separators.
+     * If no includes are specified, all classes are included by default unless excluded.
+     * <p>
+     * Pattern syntax:
+     * <ul>
+     *   <li>{@code *} matches zero or more characters except '/'</li>
+     *   <li>{@code **} matches zero or more directories</li>
+     *   <li>{@code ?} matches a single character</li>
+     * </ul>
+     * <p>
+     * Examples:
+     * <ul>
+     *   <li>{@code "com/myapp/&ast;&ast;"} - all classes in com.myapp and subpackages</li>
+     *   <li>{@code "&ast;&ast;/service/&ast;"} - all classes directly in any service package</li>
+     *   <li>{@code "com/myapp/MyClass"} - single class com.myapp.MyClass</li>
+     * </ul>
+     *
+     * @param patterns the Ant-style include patterns; must not be null, empty, or contain null/empty elements
+     * @return this operation instance
+     * @throws NullPointerException     if patterns is null or contains null
+     * @throws IllegalArgumentException if patterns is empty or contains empty strings
+     * @see #includes(String...)
+     * @see #excludes(Collection)
+     */
+    public final JacocoReportOperation includes(@NonNull Collection<String> patterns) {
+        ObjectTools.requireAllNotEmpty(patterns, "Include patterns must not be null or empty");
+        includes_.clear();
+        includes_.addAll(patterns);
+        return this;
     }
 
     /**
@@ -549,8 +803,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param name the name
      * @return this operation instance
      */
-    public JacocoReportOperation name(String name) {
-        reportName_ = name;
+    public JacocoReportOperation name(@NonNull String name) {
+        reportName_ = Objects.requireNonNull(name, "The name must not be null");
         return this;
     }
 
@@ -579,10 +833,12 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
-     * @see #sourceFiles(Collection...)
+     * @see #sourceFiles(Collection)
      */
-    public JacocoReportOperation sourceFiles(File... sourceFiles) {
-        sourceFiles_.addAll(CollectionTools.combine(sourceFiles));
+    public JacocoReportOperation sourceFiles(@NonNull File... sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
+        sourceFiles_.clear();
+        sourceFiles_.addAll(List.of(sourceFiles));
         return this;
     }
 
@@ -591,9 +847,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
-     * @see #sourceFilesStrings(Collection...)
+     * @see #sourceFilesStrings(Collection)
      */
-    public JacocoReportOperation sourceFiles(String... sourceFiles) {
+    public JacocoReportOperation sourceFiles(@NonNull String... sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, "Source files values must not be null or empty");
+        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combineStringsToFiles(sourceFiles));
         return this;
     }
@@ -603,9 +861,11 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param sourceFiles the source files
      * @return this operation instance
-     * @see #sourceFilesPaths(Collection...)
+     * @see #sourceFilesPaths(Collection)
      */
-    public JacocoReportOperation sourceFiles(Path... sourceFiles) {
+    public JacocoReportOperation sourceFiles(@NonNull Path... sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
+        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combinePathsToFiles(sourceFiles));
         return this;
     }
@@ -617,9 +877,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #sourceFiles(File...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation sourceFiles(Collection<File>... sourceFiles) {
-        sourceFiles_.addAll(CollectionTools.combine(sourceFiles));
+    public final JacocoReportOperation sourceFiles(@NonNull Collection<File> sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
+        sourceFiles_.clear();
+        sourceFiles_.addAll(sourceFiles);
         return this;
     }
 
@@ -631,7 +892,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the source files
      */
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public List<File> sourceFiles() {
         return sourceFiles_;
     }
@@ -643,8 +903,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #sourceFiles(Path...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation sourceFilesPaths(Collection<Path>... sourceFiles) {
+    public final JacocoReportOperation sourceFilesPaths(@NonNull Collection<Path> sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
+        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combinePathsToFiles(sourceFiles));
         return this;
     }
@@ -656,8 +917,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #sourceFiles(String...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation sourceFilesStrings(Collection<String>... sourceFiles) {
+    public final JacocoReportOperation sourceFilesStrings(@NonNull Collection<String> sourceFiles) {
+        ObjectTools.requireAllNotEmpty(sourceFiles, "Source files values must not be null or empty");
+        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combineStringsToFiles(sourceFiles));
         return this;
     }
@@ -669,6 +931,9 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     public JacocoReportOperation tabWidth(int tabWidth) {
+        if (tabWidth <= 0) {
+            throw new IllegalArgumentException("tabWidth must be positive, got: " + tabWidth);
+        }
         tabWidth_ = tabWidth;
         return this;
     }
@@ -684,12 +949,20 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
 
     /**
      * Sets the test operation.
+     * <p>
+     * If set, tests are always executed even when {@link #execFiles(File...)} is also called.
+     * The JaCoCo agent is attached to this operation and the resulting execution data is
+     * merged with any provided exec files.
+     * <p>
+     * If not set and no exec files are provided, {@link #fromProject(BaseProject)} will
+     * create a default test operation from the project.
      *
      * @param testOperation the test operation; must not be null
      * @return this operation instance
+     * @see #execFiles(File...)
      */
-    public JacocoReportOperation testOperation(TestOperation<?, ?> testOperation) {
-        testOperation_ = Objects.requireNonNull(testOperation, "testOperation must not be null");
+    public JacocoReportOperation testOperation(@NonNull TestOperation<?, ?> testOperation) {
+        testOperation_ = Objects.requireNonNull(testOperation, "Test operation must not be null");
         return this;
     }
 
@@ -701,7 +974,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @return the test tool options
      */
-    @SuppressFBWarnings("EI_EXPOSE_REP")
     public List<String> testToolOptions() {
         return testToolOptions_;
     }
@@ -711,10 +983,12 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      *
      * @param options the options to set
      * @return this operation instance
-     * @see #testToolOptions(Collection...)
+     * @see #testToolOptions(Collection)
      */
-    public JacocoReportOperation testToolOptions(String... options) {
-        testToolOptions_.addAll(CollectionTools.combine(options));
+    public JacocoReportOperation testToolOptions(@NonNull String... options) {
+        ObjectTools.requireAllNotEmpty(options, "Test tool options must not be null or empty");
+        testToolOptions_.clear();
+        testToolOptions_.addAll(List.of(options));
         return this;
     }
 
@@ -725,9 +999,10 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      * @see #testToolOptions(String...)
      */
-    @SafeVarargs
-    public final JacocoReportOperation testToolOptions(Collection<String>... options) {
-        testToolOptions_.addAll(CollectionTools.combine(options));
+    public final JacocoReportOperation testToolOptions(@NonNull Collection<String> options) {
+        ObjectTools.requireAllNotEmpty(options, "Test tool options must not be null or empty");
+        testToolOptions_.clear();
+        testToolOptions_.addAll(options);
         return this;
     }
 
@@ -737,8 +1012,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param xml the report location
      * @return this operation instance
      */
-    public JacocoReportOperation xml(File xml) {
-        xml_ = xml;
+    public JacocoReportOperation xml(@NonNull File xml) {
+        xml_ = Objects.requireNonNull(xml, "The xml file must not be null");
         return this;
     }
 
@@ -749,7 +1024,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @return this operation instance
      */
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
-    public JacocoReportOperation xml(String xml) {
+    public JacocoReportOperation xml(@NonNull String xml) {
+        ObjectTools.requireNotEmpty(xml, "The xml file must not be null or empty");
         return xml(new File(xml));
     }
 
@@ -759,7 +1035,8 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @param xml the report location
      * @return this operation instance
      */
-    public JacocoReportOperation xml(Path xml) {
+    public JacocoReportOperation xml(@NonNull Path xml) {
+        Objects.requireNonNull(xml, "The xml file must not be null");
         return xml(xml.toFile());
     }
 
@@ -773,31 +1050,70 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
     }
 
     private IBundleCoverage analyze(ExecutionDataStore data, List<File> classFiles) throws IOException {
-        var builder = new CoverageBuilder();
-        var analyzer = new Analyzer(data, builder);
-        for (var f : classFiles) {
-            if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                LOGGER.info(f.getAbsolutePath());
+        var matcher = PathMatcher.of(includes_, excludes_);
+
+        var builder = new CoverageBuilder() {
+            @Override
+            public void visitCoverage(IClassCoverage coverage) {
+                if (matcher.matches(coverage.getName())) {
+                    super.visitCoverage(coverage);
+                }
             }
-            analyzer.analyzeAll(f);
+        };
+
+        var analyzer = new Analyzer(data, builder);
+
+        for (var classFile : classFiles) {
+            if (!classFile.exists()) {
+                if (logger.isLoggable(Level.WARNING) && !silent()) {
+                    logger.warning("Class file not found, skipping: " + classFile.getAbsolutePath());
+                }
+                continue;
+            }
+            analyzer.analyzeAll(classFile);
         }
-        return builder.getBundle(reportName_);
+
+        var bundle = builder.getBundle(reportName_);
+
+        // IBundleCoverage has getPackages(), not getClasses()
+        if (logger.isLoggable(Level.WARNING) && !silent()
+                && (!includes_.isEmpty() || !excludes_.isEmpty())
+                && bundle.getPackages().isEmpty()) {
+            logger.warning("No classes matched include/exclude patterns. "
+                    + "Use '/' separators for JVM class names, e.g. 'com/example/**'");
+        }
+
+        return bundle;
+    }
+
+    // Retrieve the JaCoCo agent version.
+    @SuppressFBWarnings("STT_STRING_PARSING_A_FIELD")
+    private String getJacocoAgentVersion() throws ExitStatusException {
+        var v = JaCoCo.VERSION; // "0.8.14" or "0.8.14.202510111229" or "0.8.15-SNAPSHOT"
+        var parts = v.split("[.-]"); // split on. or -
+        if (parts.length < 3) {
+            if (logger.isLoggable(Level.SEVERE) && !silent()) {
+                logger.severe("Unexpected JaCoCo version format: " + v);
+            }
+            throw new ExitStatusException(ExitStatusException.EXIT_FAILURE);
+        }
+        return parts[0] + "." + parts[1] + "." + parts[2]; // "0.8.14"
     }
 
     private ExecFileLoader loadExecFiles(List<File> execFiles) throws IOException {
         var loader = new ExecFileLoader();
-        if (execFiles.isEmpty() && LOGGER.isLoggable(Level.WARNING) && !silent()) {
-            LOGGER.warning("No execution data files provided.");
+        if (execFiles.isEmpty() && logger.isLoggable(Level.WARNING) && !silent()) {
+            logger.warning("No execution data files provided.");
         } else {
             for (var f : execFiles) {
                 if (!f.exists()) {
-                    if (LOGGER.isLoggable(Level.WARNING) && !silent()) {
-                        LOGGER.warning("Exec file not found, skipping: " + f.getAbsolutePath());
+                    if (logger.isLoggable(Level.WARNING) && !silent()) {
+                        logger.warning("Exec file not found, skipping: " + f.getAbsolutePath());
                     }
                     continue;
                 }
-                if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-                    LOGGER.log(Level.INFO, "Loading execution data: {0}", f.getAbsolutePath());
+                if (logger.isLoggable(Level.INFO) && !silent()) {
+                    logger.log(Level.INFO, "Loading execution data: " + f.getAbsolutePath());
                 }
                 loader.load(f);
             }
@@ -805,41 +1121,41 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return loader;
     }
 
-    /**
-     * Creates a multi-format report visitor writing to XML, CSV, and HTML outputs.
-     * <p>
-     * The output streams are owned by the returned {@link IReportVisitor}; calling
-     * {@link IReportVisitor#visitEnd()} is required to flush and close them.
-     */
-    private IReportVisitor reportVisitor(File xml, File csv, File htmlDirectory) throws IOException {
-        var visitors = new ArrayList<IReportVisitor>();
-
-        @SuppressWarnings("PMD.CloseResource")
-        var xmlStream = Files.newOutputStream(xml.toPath());
+    @SuppressWarnings({"PMD.CloseResource", "PMD.AvoidCatchingGenericException"})
+    private IReportVisitor reportVisitor(@NonNull File xml, File csv, File htmlDirectory) throws IOException {
+        OutputStream xmlStream = null;
+        OutputStream csvStream = null;
         try {
+            var visitors = new ArrayList<IReportVisitor>();
+
+            xmlStream = Files.newOutputStream(xml.toPath()); // correct
             visitors.add(new XMLFormatter().createVisitor(xmlStream));
-        } catch (IOException e) {
-            xmlStream.close();
-            throw e;
-        }
 
-        @SuppressWarnings("PMD.CloseResource")
-        var csvStream = Files.newOutputStream(csv.toPath());
-        try {
+            csvStream = Files.newOutputStream(csv.toPath()); // correct
             visitors.add(new CSVFormatter().createVisitor(csvStream));
-        } catch (IOException e) {
-            csvStream.close();
+
+            visitors.add(new HTMLFormatter().createVisitor(new FileMultiReportOutput(htmlDirectory)));
+
+            return new MultiReportVisitor(visitors);
+        } catch (IOException | RuntimeException e) {
+            if (xmlStream != null) {
+                try {
+                    xmlStream.close();
+                } catch (IOException ignored) {
+                }
+            }
+            if (csvStream != null) {
+                try {
+                    csvStream.close();
+                } catch (IOException ignored) {
+                }
+            }
             throw e;
         }
-
-        visitors.add(new HTMLFormatter().createVisitor(new FileMultiReportOutput(htmlDirectory)));
-
-        return new MultiReportVisitor(visitors);
     }
 
     @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
-    @SuppressFBWarnings("OCP_OVERLY_CONCRETE_PARAMETER")
-    private ISourceFileLocator sourceLocator(List<File> sourceFiles) {
+    private ISourceFileLocator sourceLocator(Collection<File> sourceFiles) {
         var multi = new MultiSourceFileLocator(tabWidth_);
         for (var f : sourceFiles) {
             multi.add(new DirectorySourceFileLocator(f, encoding_, tabWidth_));
@@ -847,23 +1163,83 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
         return multi;
     }
 
-    private void writeReports(IBundleCoverage bundle, ExecFileLoader loader,
-                              File xml, File csv, File htmlDirectory, List<File> sourceFiles)
+    @SuppressFBWarnings({"PATH_TRAVERSAL_IN"})
+    private void writeReports(IBundleCoverage bundle,
+                              ExecFileLoader loader,
+                              File xml,
+                              File csv,
+                              File htmlDirectory,
+                              List<File> sourceFiles)
             throws IOException {
-        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-            LOGGER.log(Level.INFO, "Analyzing {0} classes.",
-                    bundle.getClassCounter().getTotalCount());
-        }
         var visitor = reportVisitor(xml, csv, htmlDirectory);
-        visitor.visitInfo(loader.getSessionInfoStore().getInfos(),
-                loader.getExecutionDataStore().getContents());
-        visitor.visitBundle(bundle, sourceLocator(sourceFiles));
-        // visitEnd() flushes and closes all underlying output streams
-        visitor.visitEnd();
-        if (LOGGER.isLoggable(Level.INFO) && !silent()) {
-            LOGGER.log(Level.INFO, "XML Report: file://{0}", xml.toURI().getPath());
-            LOGGER.log(Level.INFO, "CSV Report: file://{0}", csv.toURI().getPath());
-            LOGGER.log(Level.INFO, "HTML Report: file://{0}index.html", htmlDirectory.toURI().getPath());
+        visitor.visitInfo(loader.getSessionInfoStore().getInfos(), loader.getExecutionDataStore().getContents());
+        try {
+            visitor.visitBundle(bundle, sourceLocator(sourceFiles));
+        } finally {
+            visitor.visitEnd(); // always flushes/closes
+        }
+        if (logger.isLoggable(Level.INFO) && !silent()) {
+            logger.log(Level.INFO, "XML Report: " + new File(xml.getAbsolutePath()).toURI());
+            logger.log(Level.INFO, "CSV Report: " + new File(csv.getAbsolutePath()).toURI());
+            logger.log(Level.INFO, "HTML Report: " + new File(htmlDirectory, "index.html").toURI());
+        }
+    }
+
+    /**
+     * Ant-style path matcher for include/exclude patterns.
+     * <p>
+     * Converts Ant patterns to regex: {@code **} -> {@code .*}, {@code *} -> {@code [^/]*}, {@code ?} -> {@code .}
+     */
+    private record PathMatcher(List<Pattern> includePatterns_, List<Pattern> excludePatterns_) {
+
+        private static List<Pattern> compilePatterns(Collection<String> globs) {
+            return globs.stream().map(PathMatcher::globToRegex).map(Pattern::compile).toList();
+        }
+
+        private static String globToRegex(String glob) {
+            var normalized = glob.replace('\\', '/');
+            var sb = new StringBuilder("^");
+
+            int i = 0;
+            while (i < normalized.length()) {
+                char c = normalized.charAt(i);
+                switch (c) {
+                    case '*' -> {
+                        if (i + 1 < normalized.length() && normalized.charAt(i + 1) == '*') {
+                            sb.append(".*"); // ** -> any chars including /
+                            i += 2; // consume both *
+                        } else {
+                            sb.append("[^/]*"); // * -> any chars except /
+                            i++;
+                        }
+                    }
+                    case '?' -> {
+                        sb.append("[^/]"); // ? -> single char except /
+                        i++;
+                    }
+                    case '.', '[', ']', '{', '}', '(', ')', '+', '^', '$', '|', '\\' -> {
+                        sb.append('\\').append(c); // escape regex specials
+                        i++;
+                    }
+                    default -> {
+                        sb.append(c);
+                        i++;
+                    }
+                }
+            }
+            return sb.append('$').toString();
+        }
+
+        static PathMatcher of(Collection<String> includes, Collection<String> excludes) {
+            return new PathMatcher(compilePatterns(includes), compilePatterns(excludes));
+        }
+
+        boolean matches(String className) {
+            var normalized = className.replace('\\', '/');
+
+            boolean included = includePatterns_.isEmpty() || includePatterns_.stream().anyMatch(p -> p.matcher(normalized).matches());
+
+            return included && excludePatterns_.stream().noneMatch(p -> p.matcher(normalized).matches());
         }
     }
 }
