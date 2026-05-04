@@ -246,7 +246,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation classFiles(@NonNull File... classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
-        classFiles_.clear();
         classFiles_.addAll(List.of(classFiles));
         return this;
     }
@@ -260,7 +259,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation classFiles(@NonNull String... classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, "Class files values must not be null or empty");
-        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combineStringsToFiles(classFiles));
         return this;
     }
@@ -274,7 +272,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation classFiles(@NonNull Path... classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
-        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combinePathsToFiles(classFiles));
         return this;
     }
@@ -300,7 +297,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation classFiles(@NonNull Collection<File> classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
-        classFiles_.clear();
         classFiles_.addAll(classFiles);
         return this;
     }
@@ -314,7 +310,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation classFilesPaths(@NonNull Collection<Path> classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, CLASS_FILE_INVALID);
-        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combinePathsToFiles(classFiles));
         return this;
     }
@@ -328,7 +323,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation classFilesStrings(@NonNull Collection<String> classFiles) {
         ObjectTools.requireAllNotEmpty(classFiles, "Class files values must not be null or empty");
-        classFiles_.clear();
         classFiles_.addAll(CollectionTools.combineStringsToFiles(classFiles));
         return this;
     }
@@ -469,7 +463,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation excludes(@NonNull String... patterns) {
         ObjectTools.requireAllNotEmpty(patterns, "Exclude patterns must not be null or empty");
-        excludes_.clear();
         excludes_.addAll(List.of(patterns));
         return this;
     }
@@ -517,7 +510,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation excludes(@NonNull Collection<String> patterns) {
         ObjectTools.requireAllNotEmpty(patterns, "Exclude patterns must not be null or empty");
-        excludes_.clear();
         excludes_.addAll(patterns);
         return this;
     }
@@ -537,7 +529,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation execFiles(@NonNull File... execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
-        execFiles_.clear();
         execFiles_.addAll(List.of(execFiles));
         return this;
     }
@@ -557,7 +548,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation execFiles(@NonNull String... execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, "Exec files values must not be null or empty");
-        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combineStringsToFiles(execFiles));
         return this;
     }
@@ -577,7 +567,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation execFiles(@NonNull Path... execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
-        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combinePathsToFiles(execFiles));
         return this;
     }
@@ -597,7 +586,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation execFiles(@NonNull Collection<File> execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
-        execFiles_.clear();
         execFiles_.addAll(execFiles);
         return this;
     }
@@ -629,7 +617,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation execFilesPaths(@NonNull Collection<Path> execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
-        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combinePathsToFiles(execFiles));
         return this;
     }
@@ -649,7 +636,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation execFilesStrings(@NonNull Collection<String> execFiles) {
         ObjectTools.requireAllNotEmpty(execFiles, EXEC_FILES_NOT_VALID);
-        execFiles_.clear();
         execFiles_.addAll(CollectionTools.combineStringsToFiles(execFiles));
         return this;
     }
@@ -736,7 +722,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation includes(@NonNull String... patterns) {
         ObjectTools.requireAllNotEmpty(patterns, "Include patterns must not be null or empty");
-        includes_.clear();
         includes_.addAll(List.of(patterns));
         return this;
     }
@@ -783,7 +768,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation includes(@NonNull Collection<String> patterns) {
         ObjectTools.requireAllNotEmpty(patterns, "Include patterns must not be null or empty");
-        includes_.clear();
         includes_.addAll(patterns);
         return this;
     }
@@ -837,7 +821,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation sourceFiles(@NonNull File... sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
-        sourceFiles_.clear();
         sourceFiles_.addAll(List.of(sourceFiles));
         return this;
     }
@@ -851,7 +834,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation sourceFiles(@NonNull String... sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, "Source files values must not be null or empty");
-        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combineStringsToFiles(sourceFiles));
         return this;
     }
@@ -865,7 +847,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation sourceFiles(@NonNull Path... sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
-        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combinePathsToFiles(sourceFiles));
         return this;
     }
@@ -879,7 +860,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation sourceFiles(@NonNull Collection<File> sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
-        sourceFiles_.clear();
         sourceFiles_.addAll(sourceFiles);
         return this;
     }
@@ -905,7 +885,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation sourceFilesPaths(@NonNull Collection<Path> sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, SOURCE_FILE_NOT_VALID);
-        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combinePathsToFiles(sourceFiles));
         return this;
     }
@@ -919,7 +898,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation sourceFilesStrings(@NonNull Collection<String> sourceFiles) {
         ObjectTools.requireAllNotEmpty(sourceFiles, "Source files values must not be null or empty");
-        sourceFiles_.clear();
         sourceFiles_.addAll(CollectionTools.combineStringsToFiles(sourceFiles));
         return this;
     }
@@ -987,7 +965,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public JacocoReportOperation testToolOptions(@NonNull String... options) {
         ObjectTools.requireAllNotEmpty(options, "Test tool options must not be null or empty");
-        testToolOptions_.clear();
         testToolOptions_.addAll(List.of(options));
         return this;
     }
@@ -1001,7 +978,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      */
     public final JacocoReportOperation testToolOptions(@NonNull Collection<String> options) {
         ObjectTools.requireAllNotEmpty(options, "Test tool options must not be null or empty");
-        testToolOptions_.clear();
         testToolOptions_.addAll(options);
         return this;
     }
