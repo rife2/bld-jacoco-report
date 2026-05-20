@@ -38,7 +38,7 @@ public class JacocoReportOperationBuild extends Project {
     public JacocoReportOperationBuild() {
         pkg = "rife.bld.extension";
         name = "JacocoReportOperation";
-        version = version(1, 0, 1, "SNAPSHOT");
+        version = version(1, 1, 0, "SNAPSHOT");
 
         javaRelease = 17;
 
@@ -53,7 +53,7 @@ public class JacocoReportOperationBuild extends Project {
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion)
                         .exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld-extensions-tools",
-                        version(1, 2, 0)))
+                        version(1, 3, 0, "SNAPSHOT")))
                 .include(dependency("com.uwyn.rife2", "bld",
                         version(2, 3, 1, "SNAPSHOT")));
         scope(provided)
@@ -131,9 +131,9 @@ public class JacocoReportOperationBuild extends Project {
     @BuildCommand(summary = "Runs PMD analysis")
     public void pmd() throws Exception {
         new PmdOperation()
-                .fromProject(this)
                 .failOnViolation(true)
                 .ruleSets("config/pmd.xml")
+                .fromProject(this)
                 .execute();
     }
 

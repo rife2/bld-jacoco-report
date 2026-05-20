@@ -53,6 +53,7 @@
         <exclude name="AvoidDeeplyNestedIfStmts"/>
         <exclude name="AvoidUncheckedExceptionsInSignatures"/>
         <exclude name="CognitiveComplexity"/>
+        <exclude name="CouplingBetweenObjects"/>
         <exclude name="CyclomaticComplexity"/>
         <exclude name="ExcessiveParameterList"/>
         <exclude name="ExcessivePublicCount"/>

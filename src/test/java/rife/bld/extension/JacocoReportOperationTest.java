@@ -26,6 +26,10 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EmptySource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import rife.bld.Project;
 import rife.bld.blueprints.BaseProjectBlueprint;
 import rife.bld.extension.testing.LoggingExtension;
@@ -38,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,7 +50,7 @@ import java.util.logging.Logger;
 import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(LoggingExtension.class)
-@SuppressWarnings({"PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.ExcessiveImports"})
 class JacocoReportOperationTest {
 
     @SuppressWarnings("LoggerInitializedWithForeignClass")
@@ -69,6 +74,8 @@ class JacocoReportOperationTest {
         csvFile = (new File(tempDir, "jacoco.csv"));
         htmlDir = (new File(tempDir, "html"));
         xmlFile = (new File(tempDir, "jacoco.xml"));
+
+        testLogHandler.clear();
     }
 
     @Test
@@ -170,7 +177,8 @@ class JacocoReportOperationTest {
         @Test
         void executeFailureWhenProjectNotSet() {
             var op = new JacocoReportOperation();
-            assertThatCode(op::execute).isInstanceOf(NullPointerException.class);
+            assertThatCode(op::execute).isInstanceOf(NullPointerException.class)
+                    .hasMessageContaining("project");
         }
 
         @Test
@@ -617,12 +625,12 @@ class JacocoReportOperationTest {
         void excludesRejectsNullOrEmpty() {
             var op = new JacocoReportOperation();
             assertThatThrownBy(() -> op.excludes((String[]) null))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(NullPointerException.class);
             assertThatThrownBy(() -> op.excludes(""))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("must not be null or empty");
+                    .hasMessageContaining("patterns must not be empty");
             assertThatThrownBy(() -> op.excludes((Collection<String>) null))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(NullPointerException.class);
             assertThatThrownBy(() -> op.excludes(List.of("")))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -658,23 +666,6 @@ class JacocoReportOperationTest {
                         .isFalse();
             }
             assertThat(op.excludes()).containsExactly("**/Examples");
-        }
-
-        @Test
-        @SuppressWarnings("DataFlowIssue")
-        void includesRejectsNullOrEmpty() {
-            var op = new JacocoReportOperation();
-            assertThatThrownBy(() -> op.includes((String[]) null))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> op.includes(""))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("must not be null or empty");
-            assertThatThrownBy(() -> op.includes("valid", null))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> op.includes((Collection<String>) null))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> op.includes(List.of("")))
-                    .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
@@ -1021,6 +1012,409 @@ class JacocoReportOperationTest {
                 op.xml(FOO);
                 assertThat(op.xml()).isEqualTo(fooFile);
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("Report Enable/Disable Tests")
+    class ReportEnableDisableTests {
+
+        @Test
+        void csvDisabledByDefaultIsFalse() {
+            var op = new JacocoReportOperation();
+            assertThat(op.isCsvDisabled()).isFalse();
+        }
+
+        private void deleteRecursively(File dir) throws IOException {
+            if (dir.exists()) {
+                try (var paths = Files.walk(dir.toPath())) {
+                    paths.sorted(Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(File::delete);
+                }
+            }
+        }
+
+        @Test
+        void disableAllSkipsAnalysisAndDoesNotCreateDirs() throws Exception {
+            var project = new BaseProjectBlueprint(
+                    tempDir,
+                    "com.example",
+                    "test",
+                    "Test");
+
+            var reportsDir = Path.of(project.buildDirectory().getPath(), "reports", "jacoco", "test").toFile();
+            var execDir = Path.of(project.buildDirectory().getPath(), "jacoco").toFile();
+
+            deleteRecursively(reportsDir);
+            deleteRecursively(execDir);
+
+            var op = new JacocoReportOperation()
+                    .fromProject(project)
+                    .disableCsv()
+                    .disableHtml()
+                    .disableXml();
+
+            // execute() will throw because execFiles is empty, so it tries to run tests
+            // and fails finding the agent before the disable-check
+            assertThatThrownBy(op::execute)
+                    .isInstanceOf(ExitStatusException.class);
+
+            assertThat(testLogHandler.containsMessage("JaCoCo agent does not exist")).isTrue();
+
+            // Directories still shouldn't be created even on failure
+            assertThat(reportsDir).doesNotExist();
+            assertThat(execDir).doesNotExist();
+
+        }
+
+        @Test
+        void disableCsvOnlyGeneratesHtmlAndXml() throws Exception {
+            var op = newJacocoReportOperation().disableCsv();
+            op.execute();
+            testLogHandler.printLogMessages();
+
+            assertThat(csvFile).doesNotExist();
+            assertThat(xmlFile).exists();
+            assertThat(htmlDir).isDirectory();
+            assertThat(Path.of(htmlDir.getPath(), "index.html")).exists();
+        }
+
+        @Test
+        void disableCsvSetsFlag() {
+            var op = new JacocoReportOperation().disableCsv();
+            assertThat(op.isCsvDisabled()).isTrue();
+        }
+
+        @Test
+        void disableHtmlOnlyGeneratesCsvAndXml() throws Exception {
+            var op = newJacocoReportOperation().disableHtml();
+            op.execute();
+            testLogHandler.printLogMessages();
+
+            assertThat(csvFile).exists();
+            assertThat(xmlFile).exists();
+            assertThat(htmlDir).doesNotExist();
+        }
+
+        @Test
+        void disableHtmlSetsFlag() {
+            var op = new JacocoReportOperation().disableHtml();
+            assertThat(op.isHtmlDisabled()).isTrue();
+        }
+
+        @Test
+        void disableXmlOnlyGeneratesCsvAndHtml() throws Exception {
+            var op = newJacocoReportOperation().disableXml();
+            op.execute();
+            testLogHandler.printLogMessages();
+
+            assertThat(csvFile).exists();
+            assertThat(xmlFile).doesNotExist();
+            assertThat(htmlDir).isDirectory();
+        }
+
+        @Test
+        void disableXmlSetsFlag() {
+            var op = new JacocoReportOperation().disableXml();
+            assertThat(op.isXmlDisabled()).isTrue();
+        }
+
+        @Test
+        void enableAllReportsAfterDisableGeneratesEverything() throws Exception {
+            var op = newJacocoReportOperation()
+                    .disableCsv()
+                    .disableHtml()
+                    .disableXml()
+                    .enableAllReports();
+
+            op.execute();
+            testLogHandler.printLogMessages();
+
+            assertThat(csvFile).exists();
+            assertThat(xmlFile).exists();
+            assertThat(htmlDir).isDirectory();
+        }
+
+        @Test
+        void enableAllReportsClearsAllFlags() {
+            var op = new JacocoReportOperation()
+                    .disableCsv()
+                    .disableHtml()
+                    .disableXml()
+                    .enableAllReports();
+
+            assertThat(op.isCsvDisabled()).isFalse();
+            assertThat(op.isHtmlDisabled()).isFalse();
+            assertThat(op.isXmlDisabled()).isFalse();
+        }
+
+        @Test
+        void enableCsvClearsFlag() {
+            var op = new JacocoReportOperation().disableCsv().enableCsv();
+            assertThat(op.isCsvDisabled()).isFalse();
+        }
+
+        @Test
+        void enableHtmlClearsFlag() {
+            var op = new JacocoReportOperation().disableHtml().enableHtml();
+            assertThat(op.isHtmlDisabled()).isFalse();
+        }
+
+        @Test
+        void enableXmlClearsFlag() {
+            var op = new JacocoReportOperation().disableXml().enableXml();
+            assertThat(op.isXmlDisabled()).isFalse();
+        }
+
+        @Test
+        void fluentChainingReturnsSameInstance() {
+            var op = new JacocoReportOperation();
+            assertThat(op.disableCsv()).isSameAs(op);
+            assertThat(op.disableHtml()).isSameAs(op);
+            assertThat(op.disableXml()).isSameAs(op);
+            assertThat(op.enableCsv()).isSameAs(op);
+            assertThat(op.enableHtml()).isSameAs(op);
+            assertThat(op.enableXml()).isSameAs(op);
+            assertThat(op.enableAllReports()).isSameAs(op);
+        }
+
+        @Test
+        void htmlDisabledByDefaultIsFalse() {
+            var op = new JacocoReportOperation();
+            assertThat(op.isHtmlDisabled()).isFalse();
+        }
+
+        JacocoReportOperation newJacocoReportOperation() {
+            return new JacocoReportOperation()
+                    .fromProject(new BaseProjectBlueprint(
+                            new File("examples"),
+                            "com.example",
+                            "examples",
+                            "Examples"))
+                    .csv(csvFile)
+                    .html(htmlDir)
+                    .xml(xmlFile)
+                    .classFiles(new File("src/test/resources/Examples.class"))
+                    .sourceFiles(new File("examples/src/main/java"))
+                    .execFiles(new File("src/test/resources/jacoco.exec"));
+        }
+
+        @Test
+        void xmlDisabledByDefaultIsFalse() {
+            var op = new JacocoReportOperation();
+            assertThat(op.isXmlDisabled()).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("Validation Tests")
+    @SuppressWarnings("DataFlowIssue")
+    class ValidationTests {
+
+        @ParameterizedTest
+        @EmptySource
+        void classFilesWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().classFiles("foo", arg))
+                    .as("array has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFilesStrings(List.of("foo", arg)))
+                    .as("list has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFilesStrings(List.of()))
+                    .as("list is empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFiles(arg))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void classFilesWithNull(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().classFiles("foo", arg))
+                    .as("array has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFilesStrings(List.of("foo", arg)))
+                    .as("list has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFiles((File[]) null))
+                    .as("array is null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().classFiles((Collection<File>) null))
+                    .as("collection is null").isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void encodingWithNullOrEmpty() {
+            assertThatThrownBy(() -> new JacocoReportOperation().encoding(null))
+                    .as("encoding null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().encoding(""))
+                    .as("encoding empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @EmptySource
+        void excludesWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes("foo", arg))
+                    .as("array has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes(List.of("foo", arg)))
+                    .as("list has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes(List.of()))
+                    .as("list is empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes(""))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void excludesWithNull(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes("foo", arg))
+                    .as("array has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes(List.of("foo", arg)))
+                    .as("list has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes((String[]) null))
+                    .as("array is null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().excludes((Collection<String>) null))
+                    .as("collection is null").isInstanceOf(NullPointerException.class);
+        }
+
+        @ParameterizedTest
+        @EmptySource
+        void execFilesWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().execFiles("foo", arg))
+                    .as("array has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFilesStrings(List.of("foo", arg)))
+                    .as("list has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFilesStrings(List.of()))
+                    .as("list is empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFiles(arg))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void execFilesWithNull(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().execFiles("foo", arg))
+                    .as("array has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFilesStrings(List.of("foo", arg)))
+                    .as("list has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFiles((File[]) null))
+                    .as("array is null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().execFiles((Collection<File>) null))
+                    .as("collection is null").isInstanceOf(NullPointerException.class);
+        }
+
+        @ParameterizedTest
+        @EmptySource
+        void fileSettersWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().csv(arg))
+                    .as("csv string empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().html(arg))
+                    .as("html string empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().xml(arg))
+                    .as("xml string empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().destFile(arg))
+                    .as("destFile string empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void fileSettersWithNull(File file) {
+            assertThatThrownBy(() -> new JacocoReportOperation().csv(file))
+                    .as("csv file null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().html(file))
+                    .as("html file null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().xml(file))
+                    .as("xml file null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().destFile(file))
+                    .as("destFile file null").isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void fromProjectWithNull() {
+            assertThatThrownBy(() -> new JacocoReportOperation().fromProject(null))
+                    .as("project null").isInstanceOf(NullPointerException.class);
+        }
+
+        @ParameterizedTest
+        @EmptySource
+        void includesWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().includes("foo", arg))
+                    .as("array has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes(List.of("foo", arg)))
+                    .as("list has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes(List.of()))
+                    .as("list is empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes(arg))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void includesWithNull(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().includes("foo", arg))
+                    .as("array has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes(List.of("foo", arg)))
+                    .as("list has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes((String[]) null))
+                    .as("array is null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().includes((Collection<String>) null))
+                    .as("collection is null").isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void nameWithNullOrEmpty() {
+            assertThatThrownBy(() -> new JacocoReportOperation().name(null))
+                    .as("name null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().name(""))
+                    .as("name empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @EmptySource
+        void sourceFilesWithEmpty(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFiles("foo", arg))
+                    .as("array has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFilesStrings(List.of("foo", arg)))
+                    .as("list has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFilesStrings(List.of()))
+                    .as("list is empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFiles(arg))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @ParameterizedTest
+        @NullSource
+        void sourceFilesWithNull(String arg) {
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFiles("foo", arg))
+                    .as("array has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFilesStrings(List.of("foo", arg)))
+                    .as("list has null element").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFiles((File[]) null))
+                    .as("array is null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().sourceFiles((Collection<File>) null))
+                    .as("collection is null").isInstanceOf(NullPointerException.class);
+        }
+
+        @ParameterizedTest
+        @ValueSource(ints = {0, -1, -10})
+        void tabWidthWithNonPositive(int width) {
+            assertThatThrownBy(() -> new JacocoReportOperation().tabWidth(width))
+                    .as("tabWidth must be positive").isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        void testOperationWithNull() {
+            assertThatThrownBy(() -> new JacocoReportOperation().testOperation(null))
+                    .as("testOperation null").isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void testToolOptionsWithNullOrEmpty() {
+            assertThatThrownBy(() -> new JacocoReportOperation().testToolOptions((String[]) null))
+                    .as("array null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().testToolOptions((Collection<String>) null))
+                    .as("collection null").isInstanceOf(NullPointerException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().testToolOptions(""))
+                    .as("varargs empty").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().testToolOptions("foo", ""))
+                    .as("has empty element").isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> new JacocoReportOperation().testToolOptions("foo", null))
+                    .as("has null element").isInstanceOf(NullPointerException.class);
         }
     }
 }
