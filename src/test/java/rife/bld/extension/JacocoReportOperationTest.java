@@ -32,9 +32,9 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import rife.bld.Project;
 import rife.bld.blueprints.BaseProjectBlueprint;
-import rife.bld.extension.testing.LoggingExtension;
-import rife.bld.extension.testing.TestLogHandler;
 import rife.bld.operations.exceptions.ExitStatusException;
+import rife.bld.testing.LoggingExtension;
+import rife.bld.testing.TestLogHandler;
 
 import java.io.File;
 import java.io.IOException;
@@ -168,13 +168,6 @@ class JacocoReportOperationTest {
         }
 
         @Test
-        void executeFailure() {
-            var op = new JacocoReportOperation().fromProject(new Project());
-
-            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
-        }
-
-        @Test
         void executeFailureWhenProjectNotSet() {
             var op = new JacocoReportOperation();
             assertThatCode(op::execute).isInstanceOf(NullPointerException.class)
@@ -194,6 +187,16 @@ class JacocoReportOperationTest {
             var op = new JacocoReportOperation().silent(true);
             assertThatCode(op::execute).isInstanceOf(NullPointerException.class);
             assertThat(testLogHandler.getLogMessages()).isEmpty();
+        }
+
+        @Test
+        void executeFailureWithInvalidToolOptions() {
+            var op = new JacocoReportOperation().fromProject(
+                    new BaseProjectBlueprint(new File("examples"), "com.example", "examples", "Examples")
+            );
+            op.testToolOptions("foo");
+
+            assertThatCode(op::execute).isInstanceOf(ExitStatusException.class);
         }
 
         @Test
@@ -1025,6 +1028,7 @@ class JacocoReportOperationTest {
             assertThat(op.isCsvDisabled()).isFalse();
         }
 
+        @SuppressWarnings("ResultOfMethodCallIgnored")
         private void deleteRecursively(File dir) throws IOException {
             if (dir.exists()) {
                 try (var paths = Files.walk(dir.toPath())) {
@@ -1058,9 +1062,8 @@ class JacocoReportOperationTest {
             // execute() will throw because execFiles is empty, so it tries to run tests
             // and fails finding the agent before the disable-check
             assertThatThrownBy(op::execute)
-                    .isInstanceOf(ExitStatusException.class);
-
-            assertThat(testLogHandler.containsMessage("JaCoCo agent does not exist")).isTrue();
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("org.jacoco:org.jacoco.agent:runtime");
 
             // Directories still shouldn't be created even on failure
             assertThat(reportsDir).doesNotExist();
