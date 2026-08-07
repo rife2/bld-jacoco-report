@@ -48,7 +48,7 @@ public class JacocoReportOperationBuild extends Project {
         repositories = List.of(MAVEN_CENTRAL, CENTRAL_SNAPSHOTS, RIFE2_RELEASES, RIFE2_SNAPSHOTS);
 
         var jacocoVersion = new VersionNumber(0, 8, 15);
-        var junit = version(6, 1, 2);
+        var junit = version(6, 1, 3);
         scope(compile)
                 .include(dependency("org.jacoco", "jacoco", jacocoVersion)
                         .exclude("*", "org.jacoco.doc"))
