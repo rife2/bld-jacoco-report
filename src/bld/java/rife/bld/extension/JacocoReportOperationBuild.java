@@ -54,7 +54,7 @@ public class JacocoReportOperationBuild extends Project {
                         .exclude("*", "org.jacoco.doc"))
                 .include(dependency("com.uwyn.rife2", "bld-extensions-tools",
                         version(1, 3, 0)))
-                .include(dependency("com.uwyn.rife2", "bld", version(3, 0, 0)));
+                .include(dependency("com.uwyn.rife2", "bld", version(3, 0, 1)));
         scope(provided)
                 .include(dependency("org.jspecify", "jspecify", "1.0.1"))
                 .include(dependency("com.github.spotbugs", "spotbugs-annotations",
