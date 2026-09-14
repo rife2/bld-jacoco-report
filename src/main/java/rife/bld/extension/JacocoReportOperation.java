@@ -174,7 +174,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @throws NullPointerException if the project is {@code null}
      */
     @Override
-    @SuppressFBWarnings("CC_CYCLOMATIC_COMPLEXITY")
     public void execute() throws Exception {
         ObjectTools.requireNonNull(project_, "project");
 
@@ -417,7 +416,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @throws NullPointerException     if {@code csv} is {@code null}
      * @throws IllegalArgumentException if {@code csv} is blank
      */
-    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation csv(String csv) {
         TextTools.requireNotBlank(csv, "csv");
         return csv(new File(csv));
@@ -465,7 +463,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @throws NullPointerException     if {@code destFile} is {@code null}
      * @throws IllegalArgumentException if {@code destFile} is blank
      */
-    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation destFile(String destFile) {
         TextTools.requireNotBlank(destFile, "destFile");
         return destFile(new File(destFile));
@@ -881,7 +878,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @throws NullPointerException     if {@code html} is {@code null}
      * @throws IllegalArgumentException if {@code html} is blank
      */
-    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation html(String html) {
         TextTools.requireNotBlank(html, HTML);
         return html(new File(html));
@@ -1266,7 +1262,6 @@ public class JacocoReportOperation extends AbstractOperation<JacocoReportOperati
      * @throws NullPointerException     if {@code xml} is {@code null}
      * @throws IllegalArgumentException if {@code xml} is blank
      */
-    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public JacocoReportOperation xml(String xml) {
         TextTools.requireNotBlank(xml, "xml");
         return xml(new File(xml));
